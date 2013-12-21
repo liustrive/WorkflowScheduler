@@ -292,7 +292,7 @@ class WorkflowTaskScheduler extends TaskScheduler {
     }
     
     /*
-     * This is the central scheduling method. 
+     * This is the central scheduling method. // this modified by liu
      * It tries to get a task from jobs in a single queue. 
      * Always return a TaskLookupResult object. Don't return null. 
      */
@@ -1022,6 +1022,9 @@ class WorkflowTaskScheduler extends TaskScheduler {
   @Override
   public synchronized List<Task> assignTasks(TaskTracker taskTracker)
   throws IOException {    
+	// First: update all workflow app process, need to find out if this is too costly.
+	jobQueuesManager.updateALLwfAppProcess();
+	// Then goes on...
     TaskTrackerStatus taskTrackerStatus = taskTracker.getStatus();
     ClusterStatus c = taskTrackerManager.getClusterStatus();
     int mapClusterCapacity = c.getMaxMapTasks();
@@ -1163,14 +1166,7 @@ class WorkflowTaskScheduler extends TaskScheduler {
     // setup scheduler specific job information
     preInitializeJob(job);
     //Liu edited
-    Path jobFilePath = new Path(job.jobFile);
-    Path jobSubmitDir = jobFilePath.getParent();
-    Path jobDistCacheFiles = JobSubmissionFiles.getJobDistCacheFiles(jobSubmitDir);
-    //Liu edited 
-    LOG.info("File Path: "+ job.jobFile+ ". JobSubmitDir: " + jobSubmitDir.toString()+". JobDistCacheFiles: "+ jobDistCacheFiles.toString());
     
-    //get DistCacheFiles -files *
-    List<Path> distCacheFiles = getFileList(jobDistCacheFiles);
     
     if (LOG.isDebugEnabled()) {
       String user = job.getProfile().getUser();

@@ -1,4 +1,5 @@
 package org.apache.hadoop.mapred.wfapp;
+import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 
@@ -25,10 +26,11 @@ public class NodeDef implements Writable {
     private String userRetryMax = "null";
     private String userRetryInterval = "null";
     private int rank;
-    private int jobId;
+    private JobID jobId;
     private boolean started = false;
     private boolean finished = false;
- 
+    private int mapTaskNum = 0;
+    private int reduceTaskNum = 0;
 
     NodeDef() {
     }
@@ -85,6 +87,18 @@ public class NodeDef implements Writable {
     public String getCred() {
         return cred;
     }
+    public void setMapNum(int mapNum){
+    	mapTaskNum = mapNum;
+    }
+    public void setReduceNum(int reduceNum){
+    	reduceTaskNum = reduceNum;
+    }
+    public int getMapNum(){
+    	return mapTaskNum;
+    }
+    public int getReduceNum(){
+    	return reduceTaskNum;
+    }
 
     public Class<? extends NodeHandler> getHandlerClass() {
         return handlerClass;
@@ -111,10 +125,10 @@ public class NodeDef implements Writable {
     public void setRank(int r){
     	rank = r;
     }
-    public int getJobId(){
+    public JobID getJobId(){
     	return jobId;
     }
-    public void setJobId(int id){
+    public void setJobId(JobID id){
     	jobId = id;
     }
     

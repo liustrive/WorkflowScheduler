@@ -434,10 +434,12 @@ public class WorkflowXmlParser {
                                                     if (SLA_INFO.equals(elem.getName()) || CREDENTIALS.equals(elem.getName())) {
                                                         continue;
                                                     }
-//                                                    else {
-//                                                        eActionConf = elem;
-//                                                        
-//                                                        }
+                                                    else {
+                                                        eActionConf = elem;
+                                                        // add the job config to app map jobConfig,
+                                                        //the map&reduce task number can be useful when counting critical path and process
+                                                        handleJobConfig(eActionConf,def,eNode.getAttributeValue(NAME_A));
+                                                        }
                                                 }
                                             }
                                         }
@@ -593,6 +595,37 @@ public class WorkflowXmlParser {
         }
         
     }
+    
+    private void handleJobConfig(Element eActionConf, WorkflowApp app,String jobName){
+    	Namespace actionNs = eActionConf.getNamespace();
+    	NodeConfig nodeConf = new NodeConfig();
+    	if(eActionConf != null){
+    		//get job config such as map/reduce task number, queue name, input/output dir.
+    		
+    		for(Element jobConf : (List<Element>)eActionConf.getChildren()){
+    			String confName = jobConf.getChildText("name", actionNs);
+    			if(confName.equals("mapred.map.tasks")){
+    				String confValue = jobConf.getChildText("value", actionNs);
+    				nodeConf.mapTaskNum = Integer.parseInt(confValue);
+    			}
+    			else if(confName.equals("mapred.reduce.tasks")){
+    				String confValue = jobConf.getChildText("value", actionNs);
+    				nodeConf.reduceTaskNum = Integer.parseInt(confValue);
+    			}
+    			else if(confName.equals("mapred.job.queue.name")){
+    				nodeConf.queueName = jobConf.getChildText("value", actionNs);
+    			}
+    			else if(confName.equals("mapred.input.dir")){
+    				nodeConf.inputDir = jobConf.getChildText("value", actionNs);
+    			}
+    			else if(confName.equals("mapred.output.dir")){
+    				nodeConf.outputDir = jobConf.getChildText("value", actionNs);
+    			}
+    		}
+    		app.addJobConfig(jobName, nodeConf);
+    	}
+    }
+    
     /**
      * Handle the global section
      *

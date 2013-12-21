@@ -1,5 +1,6 @@
 package org.apache.hadoop.mapred.wfapp;
-import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.mapred.*;
+
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -21,20 +22,22 @@ import java.util.Map;
 //TODO javadoc
 public class WorkflowApp{
     private String name;
+    private String user;
     private String definition;
-    private long deadline;
-    private long startTimeInMilliseconds;
+    private WorkflowAppProcess appProcess;
+    private int jobtofinish = 0;
     private int priority = 0; // 0 for normal, 1 for high, -1 for low, -10 for linger
     private String triggerJob;
     private boolean isTrigger = false;
     private Map<String, NodeDef> nodesMap = new LinkedHashMap<String, NodeDef>();
-    private Map<Integer, String> nodesIdName = new HashMap<Integer, String>();
+    private Map<JobID, String> nodesIdName = new HashMap<JobID, String>();
     private Map<String, Integer> nodeRankMap = new HashMap<String, Integer>();
+    private Map<String, NodeConfig> jobConfig = new HashMap<String, NodeConfig>();
     private List<String> criticalPath = new ArrayList<String>();
     private boolean complete = false;
     private boolean ranked = false; // if the nodes' rank have been set
     static final Log LOG = LogFactory.getLog(WorkflowApp.class);
-    private static String PATH_SEPARATOR = "/";
+    public static String PATH_SEPARATOR = "/";
 
 
     WorkflowApp() {
@@ -44,8 +47,9 @@ public class WorkflowApp{
         this.name = ParamChecker.notEmpty(name, "name");
         this.definition = ParamChecker.notEmpty(definition, "definition");
         nodesMap.put(StartNodeDef.START, startNode);
+        appProcess = new WorkflowAppProcess(name);
     }
-
+    
     public boolean equals(WorkflowApp other) {
         return !(other == null || getClass() != other.getClass() || !getName().equals(other.getName()));
     }
@@ -54,30 +58,62 @@ public class WorkflowApp{
         return name.hashCode();
     }
     //liu added
+    public int addCompleteJob(int num){
+    	appProcess.numCompletedJobTasks += num;
+    	return appProcess.numCompletedJobTasks;
+    }
+    public int getCompleteJobTasksNum(){
+    	return appProcess.numCompletedJobTasks;
+    }
+    public void setCriticalCompletedTaskNum(int num){
+    	appProcess.numCriticalCompletedTotalTask = num;
+    }
+    public void setCriticalTotalTaskNum(int num){
+    	appProcess.numCriticalTotalTasks = num;
+    }
+//    public void setAppTotalTaskNum(int num){
+//    	appProcess.numAppTotalTasks = num;
+//    }
+    public WorkflowAppProcess getAppProcess(){
+    	return appProcess;
+    }
+    public boolean finished(){
+    	if(jobtofinish==0){
+    		return true;
+    	}
+    	else
+    		return false;
+    }
+    public void setUser(String u){
+    	user = u;
+    }
+    public String getUser(){
+    	return user;
+    }
     /**
      * set deadline of workflowApp, the time string will be convert to
      * the number of milliseconds that have elapsed since January 1, 1970
      * @param time
      */
+    public List<JobID> allActionNodesID(){
+    	List<JobID> jobids = new ArrayList<JobID>();
+    	jobids.addAll(nodesIdName.keySet());
+    	return jobids;
+    }
     public void setDeadline(String time){
     	SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
     	try{
     		Date date = dateFormat.parse(time);
-    		deadline = date.getTime();
+    		appProcess.deadline = date.getTime();
     	}
     	catch(Exception e){
     		LOG.info("wrong deadline time format!: "+ e.getMessage());
     	}
     }
     public long getDeadline(){
-    	return deadline;
+    	return appProcess.deadline;
     }
-    public void setStartTime(Date date){
-    	startTimeInMilliseconds = date.getTime();
-    }
-    public long getStartTime(){
-    	return startTimeInMilliseconds;
-    }
+
     public void setPriority(int pri){
     	priority = pri;
     }
@@ -93,6 +129,17 @@ public class WorkflowApp{
     }
     public String getTriggerJob(){
     	return triggerJob;
+    }
+    public void addJobConfig(String jobName,NodeConfig conf){
+    	jobConfig.put(jobName,conf);
+    }
+    /**
+     * will return null if no job found
+     * @param jobName
+     * @return
+     */
+    public NodeConfig getJobConfig(String jobName){
+    	return jobConfig.get(jobName);
     }
     /**
      *  set the rank of nodes (R(n_i) = 1+ max_(n_j in succ(n_i)) R(n_j) )
@@ -160,7 +207,7 @@ public class WorkflowApp{
      * @param id
      * @return
      */
-    public boolean setActionNodeId(String jobName,int id){
+    public boolean setActionNodeId(String jobName,JobID id){
     	NodeDef node = getNode(jobName);
     	if(node==null)
     	{
@@ -186,7 +233,7 @@ public class WorkflowApp{
      * @param id
      * @return
      */
-    public String getNodeNameById(int id){
+    public String getNodeNameById(JobID id){
     	String nodeName = nodesIdName.get(id);
     	if(nodeName == null){
     		LOG.info("job id: "+id+ " isn't in the list of workflowapp");
@@ -214,12 +261,15 @@ public class WorkflowApp{
     	else
     		return rank = node.getRank();
     }
-
+    public int getNodeRank(JobID jobid){
+    	String jobName = nodesIdName.get(jobid);
+    	return getNodeRank(jobName);
+    }
     private boolean checkNodeRank(NodeDef node){
     	Iterator it = nodeRankMap.entrySet().iterator();
     	while(it.hasNext()){
     		Map.Entry<String, Integer> pair = (Map.Entry<String, Integer>)it.next();
-    		if(pair.getValue()>node.getRank()){
+    		if(pair.getValue().intValue() >node.getRank()){
     			if(!getNode(pair.getKey()).isStarted())
     				return false;
     		}
@@ -237,7 +287,7 @@ public class WorkflowApp{
      * @param id
      * @return
      */
-    public boolean shouldStart(int id){
+    public boolean shouldStart(JobID id){
     	String nodeName = getNodeNameById(id);
     	if(nodeName != null){
     		NodeDef node = getNode(nodeName);
@@ -259,7 +309,7 @@ public class WorkflowApp{
      * @param node
      * @param list
      */
-    private void isAvailableActionNode(NodeDef node, List<Integer> list, String forkJoinPaths,Map<String,Integer> joinMap){
+    private void isAvailableActionNode(NodeDef node, List<JobID> list, String forkJoinPaths,Map<String,Integer> joinMap){
     	
     	if(node instanceof ActionNodeDef){
     		if(node.isStarted()){
@@ -326,9 +376,9 @@ public class WorkflowApp{
      * return list of available ActionNodes' id
      * @return
      */
-    public List<Integer> availableJobs(){
+    public List<JobID> availableJobs(){
     	
-    	List<Integer> jobList = new ArrayList<Integer>();
+    	List<JobID> jobList = new ArrayList<JobID>();
     	NodeDef node = getNode(StartNodeDef.START);
     	String forkJoinPaths = StartNodeDef.START;
     	String transition = node.getTransitions().get(0);
@@ -337,16 +387,17 @@ public class WorkflowApp{
     	return jobList;
     }
     
-    public void nodeStarted(int id){
+    public void nodeStarted(JobID id){
     	String nodeName = getNodeNameById(id);
     	if(nodeName != null){
     		getNode(nodeName).start();
     	}
     }
-    public void nodeFinished(int id){
+    public void nodeFinished(JobID id){
     	String nodeName = getNodeNameById(id);
     	if(nodeName != null){
     		getNode(nodeName).finish();
+    		jobtofinish-=1;
     	}
     }
     public WorkflowApp addNode(NodeDef node) throws WorkflowException {
@@ -363,6 +414,9 @@ public class WorkflowApp{
         nodesMap.put(node.getName(), node);
         if (node instanceof EndNodeDef) {
             complete = true;
+        }
+        if(node instanceof ActionNodeDef){
+        	jobtofinish+=1;
         }
         ranked = false;
         return this;

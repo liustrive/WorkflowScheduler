@@ -34,7 +34,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapred.WorkflowTaskScheduler.TaskSchedulingMgr;
 import org.apache.hadoop.mapred.JobQueueJobInProgressListener.JobSchedulingInfo;
-
+import org.apache.hadoop.mapred.wfapp.*;
 
 /***********************************************************************
  * Keeping track of scheduling information for queues
@@ -284,22 +284,96 @@ class WorkflowSchedulerQueue {
   int maxJobsPerUserToAccept;
   int maxActiveTasks;
   int maxActiveTasksPerUser;
-
+  // comparator for jobs in the same workflow order by job rank. Job who's rank higher wins
+  // comparator for jobs in different workflow, eager app jobs always wins
   // comparator for jobs in queues that don't support priorities
-  private static final Comparator<JobSchedulingInfo> STARTTIME_JOB_COMPARATOR
+  private static final Comparator<JobSchedulingInfo> WF_RANK_STARTIME_JOB_COMPARATOR
     = new Comparator<JobSchedulingInfo>() {
     public int compare(JobSchedulingInfo o1, JobSchedulingInfo o2) {
-      // the job that started earlier wins
-      if (o1.getStartTime() < o2.getStartTime()) {
-        return -1;
-      } else {
-        return (o1.getStartTime() == o2.getStartTime() 
-                ? o1.getJobID().compareTo(o2.getJobID()) 
-                : 1);
+      if(o1 instanceof WorkflowJobSchedulingInfo && o2 instanceof WorkflowJobSchedulingInfo){
+    	  WorkflowJobSchedulingInfo wfo1 = (WorkflowJobSchedulingInfo)o1;
+    	  WorkflowJobSchedulingInfo wfo2 = (WorkflowJobSchedulingInfo)o2;
+    	  // if same workflowApp
+    	  if(wfo1.getAppName().equals(wfo2.getAppName())){
+    		  // job with higher rank wins
+    		  int rank1 = wfo1.getAppRank();
+    		  int rank2 = wfo2.getAppRank();
+    		  if(rank1 > rank2){
+    			  return -1;
+    		  }
+    		  else if(rank1 != rank2){
+    			  return 1;
+    		  }
+    		  else{
+    			// the job that started earlier wins
+    		      if (o1.getStartTime() < o2.getStartTime()) {
+    		        return -1;
+    		      } else {
+    		        return (o1.getStartTime() == o2.getStartTime() 
+    		                ? o1.getJobID().compareTo(o2.getJobID()) 
+    		                : 1);
+    		      }
+    		  }
+    	  }
+    	  else{// if in different workflowApp, eager wf wins
+    		  WorkflowAppProcess wfAppProc1 = WorkflowJobQueuesManager.eagerWfAppProcess.get(wfo1.getAppName());
+    		  WorkflowAppProcess wfAppProc2 = WorkflowJobQueuesManager.eagerWfAppProcess.get(wfo2.getAppName());
+    		  if(wfAppProc1 !=null && wfAppProc2 == null){
+    			  return -1;
+    		  }
+    		  else if(wfAppProc1 == null && wfAppProc2 != null){
+    			  return 1;
+    		  }
+    		  else if(wfAppProc1 == null && wfAppProc2 == null){// different workflowApp but both not eager
+    			// the job that started earlier wins
+    		      if (o1.getStartTime() < o2.getStartTime()) {
+    		        return -1;
+    		      } else {
+    		        return (o1.getStartTime() == o2.getStartTime() 
+    		                ? o1.getJobID().compareTo(o2.getJobID()) 
+    		                : 1);
+    		      }
+    		  }
+    		  else{// different workflowApp, both eager, one that slower wins
+    			  if(wfAppProc1.eagerness>wfAppProc2.eagerness){
+    				  return -1;
+    			  }
+    			  else{
+    				  return 1;
+    			  }
+    		  }
+    	  }
+      }
+      else if(o1 instanceof WorkflowJobSchedulingInfo){
+    	  return -1;
+      }
+      else if(o2 instanceof WorkflowJobSchedulingInfo){
+    	  return 1;
+      }
+      else{
+		  // the job that started earlier wins
+		  if (o1.getStartTime() < o2.getStartTime()) {
+		    return -1;
+		  } else {
+		    return (o1.getStartTime() == o2.getStartTime() 
+		            ? o1.getJobID().compareTo(o2.getJobID()) 
+		            : 1);
+		  }
       }
     }
   };
 
+  private static final Comparator<JobSchedulingInfo> WF_RANK_STARTIME_JOB_COMPARATOR_WITH_PRIORITY
+  = new Comparator<JobSchedulingInfo>() {
+  public int compare(JobSchedulingInfo o1, JobSchedulingInfo o2) {
+    int res = o1.getPriority().compareTo(o2.getPriority());
+    if (res == 0) {
+    	return WF_RANK_STARTIME_JOB_COMPARATOR.compare(o1, o2);
+    }
+    return res;
+  }
+};
+  
   public WorkflowSchedulerQueue(String queueName, WorkflowSchedulerConf conf) {
     this.queueName = queueName;
 
@@ -310,10 +384,10 @@ class WorkflowSchedulerQueue {
 
     if (supportsPriorities) {
       // use the default priority-aware comparator
-      comparator = JobQueueJobInProgressListener.FIFO_JOB_QUEUE_COMPARATOR;
+      comparator = WF_RANK_STARTIME_JOB_COMPARATOR_WITH_PRIORITY;
     }
     else {
-      comparator = STARTTIME_JOB_COMPARATOR;
+      comparator = WF_RANK_STARTIME_JOB_COMPARATOR;
     }
     this.waitingJobs = 
       new TreeMap<JobSchedulingInfo, JobInProgress>(comparator);
@@ -836,8 +910,8 @@ class WorkflowSchedulerQueue {
     return (userInfo == null) ? 0 : userInfo.getNumWaitingJobs();
   }
 
-  synchronized void addInitializingJob(JobInProgress job) {
-    JobSchedulingInfo jobSchedInfo = new JobSchedulingInfo(job);
+  synchronized void addInitializingJob(JobInProgress job,JobSchedulingInfo jobSchedInfo) {
+//    JobSchedulingInfo jobSchedInfo = new JobSchedulingInfo(job);
 
     if (!waitingJobs.containsKey(jobSchedInfo)) {
       // Ideally this should have been an *assert*, but it can't be done
@@ -916,8 +990,8 @@ class WorkflowSchedulerQueue {
     return job;
   }
   
-  synchronized void addRunningJob(JobInProgress job) {
-    JobSchedulingInfo jobSchedInfo = new JobSchedulingInfo(job);
+  synchronized void addRunningJob(JobInProgress job,JobSchedulingInfo jobSchedInfo) {
+    //JobSchedulingInfo jobSchedInfo = new JobSchedulingInfo(job);
 
     if (runningJobs.containsKey(jobSchedInfo)) {
       LOG.info("job " + job.getJobID() + " already running in queue'" +
@@ -1012,9 +1086,9 @@ class WorkflowSchedulerQueue {
 
     return job;
   }
-  
-  synchronized void addWaitingJob(JobInProgress job) throws IOException {
-    JobSchedulingInfo jobSchedInfo = new JobSchedulingInfo(job);
+
+  synchronized void addWaitingJob(JobInProgress job,JobSchedulingInfo jobSchedInfo) throws IOException {
+//    JobSchedulingInfo jobSchedInfo = new JobSchedulingInfo(job);
     if (waitingJobs.containsKey(jobSchedInfo)) {
       LOG.info("job " + job.getJobID() + " already waiting in queue '" + 
           queueName + "'!");
