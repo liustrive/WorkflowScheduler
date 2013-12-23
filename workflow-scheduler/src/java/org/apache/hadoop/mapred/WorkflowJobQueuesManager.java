@@ -111,6 +111,7 @@ class WorkflowJobQueuesManager extends JobInProgressListener {
     if(xmlFile != null){
     	List<JobInProgress> newjobs = workflowManager.jobAdded(job, xmlFile);
     	String wfAppName = workflowManager.getWfAppNameofJob(job.getJobID());
+    	LOG.info("Workflow job: " + job.getProfile().getJobName()+ "is added. Belongs to wfapp: "+ wfAppName);
     	for(JobInProgress newjob : newjobs){
     		 // add job to the right queue
     	    WorkflowSchedulerQueue queue = getQueue(newjob.getProfile().getQueueName());
@@ -238,7 +239,7 @@ class WorkflowJobQueuesManager extends JobInProgressListener {
     	}
 	}
   }
-  private JobSchedulingInfo getWorkflowJobSchedInfo(JobInProgress job){
+  public JobSchedulingInfo getWorkflowJobSchedInfo(JobInProgress job){
 	  JobSchedulingInfo jobSchedInfo = null;
 	  JobID jobid = job.getJobID();
 	  if(!workflowManager.isWorkflowJob(jobid))

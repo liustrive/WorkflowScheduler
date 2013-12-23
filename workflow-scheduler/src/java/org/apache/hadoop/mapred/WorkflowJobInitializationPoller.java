@@ -464,7 +464,8 @@ public class WorkflowJobInitializationPoller extends Thread {
         jobsToInitialize.add(job);
 
         // Inform the queue
-        queue.addInitializingJob(job);
+        JobSchedulingInfo jobSchedInfo = jobQueueManager.getWorkflowJobSchedInfo(job);
+        queue.addInitializingJob(job,jobSchedInfo);
       }
     }
     
