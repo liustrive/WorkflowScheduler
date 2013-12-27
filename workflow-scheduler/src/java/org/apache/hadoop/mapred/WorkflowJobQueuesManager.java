@@ -46,7 +46,7 @@ class WorkflowJobQueuesManager extends JobInProgressListener {
   
   private static final Log LOG = LogFactory.getLog(JobQueuesManager.class);
   private WorkflowTaskScheduler scheduler;
-  private WorkflowManager workflowManager = new WorkflowManager();
+  private static WorkflowManager workflowManager = new WorkflowManager();
   public static Map<String,WorkflowAppProcess> eagerWfAppProcess = new HashMap<String,WorkflowAppProcess>();
   // Queues in the system
   private Collection<String> jobQueueNames;
@@ -226,13 +226,13 @@ class WorkflowJobQueuesManager extends JobInProgressListener {
   	WorkflowApp app = workflowManager.getWorkflowApp(wfAppName);
 	if(app.getDeadline()!=0){ // if this app does support deadline
     	if(eagerWfAppProcess.get(wfAppName)==null){
-    		WorkflowAppProcess process = app.getAppProcess();
+    		WorkflowAppProcess process = workflowManager.getWorkflowProcessRate(app);
     		if(process.eagerness<1){
     			eagerWfAppProcess.put(wfAppName, process);
     		}
     	}
     	else{
-    		WorkflowAppProcess process = app.getAppProcess();
+    		WorkflowAppProcess process = workflowManager.getWorkflowProcessRate(app);
     		if(process.eagerness>1.2){
     			eagerWfAppProcess.put(wfAppName, process);
     		}

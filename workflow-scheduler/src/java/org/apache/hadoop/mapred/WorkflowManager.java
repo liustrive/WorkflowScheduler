@@ -113,8 +113,7 @@ public class WorkflowManager {
 	 * @param jobid
 	 * @return
 	 */
-	public WorkflowAppProcess getWorkflowProcessRate(JobID jobid){
-		WorkflowApp app = workflowApps.get(jobInWorkflow.get(jobid));
+	public WorkflowAppProcess getWorkflowProcessRate(WorkflowApp app){
 		WorkflowAppProcess appProc = app.getAppProcess();
 		ArrayList<ArrayList<String>> criticalNames = criticalPaths.get(app);
 		if(criticalNames == null){
@@ -168,6 +167,16 @@ public class WorkflowManager {
 			appProc.eagerness = appProc.numCriticalCompletedTotalTask*(appProc.deadline-appProc.startTime)/(appProc.numCriticalTotalTasks*(currentTime -appProc.startTime));
 		}
 		return appProc;
+	}
+	/**
+	 * get the workflowapp which the job is in, and return the current process rate
+	 * This function may be a little costly, and job in the critical path that havn't been submit only count task num that defined in the conf file
+	 * @param jobid
+	 * @return
+	 */
+	public WorkflowAppProcess getWorkflowProcessRate(JobID jobid){
+		WorkflowApp app = workflowApps.get(jobInWorkflow.get(jobid));
+		return getWorkflowProcessRate(app);
 	}
 	
 	public List<JobInProgress> jobAdded(JobInProgress job,Path xmlFilePath){
