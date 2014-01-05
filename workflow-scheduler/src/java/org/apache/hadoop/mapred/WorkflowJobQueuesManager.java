@@ -66,24 +66,32 @@ class WorkflowJobQueuesManager extends JobInProgressListener {
 	  Path xmlFile = null; 
 	  
       FileSystem fs = FileSystem.get(new Configuration());
-      FileStatus[] status = fs.listStatus(filePath);  
-      for (int i=0;i<status.length;i++){
-    	  	
-    	  	if(status[i].getPath().getName().equals(WorkflowManager.WFXMLFILE)){
-    	  		xmlFile = status[i].getPath();
-    	  		LOG.info("find workflow xml file: "+xmlFile.getName());
-    	  	}
-    	  	LOG.info("file path: "+status[i].getPath().toString());
-    	  	// this is how to read the file ...
-//               BufferedReader br=new BufferedReader(new InputStreamReader(fs.open(status[i].getPath())));
-//                  String line;
-//                  line=br.readLine();
-//                  while (line != null){
-//                          LOG.info("file: " + line);
-//                          line=br.readLine();
-//                  }
+      FileStatus[] status = null;
+      try{
+       status = fs.listStatus(filePath);
       }
-
+      catch(IOException ioe){
+    	  LOG.info("cache filepath: "+filePath.toString()+" does not exist." + ioe.getMessage());
+    	  return null;
+      }
+      if(status!=null){
+	      for (int i=0;i<status.length;i++){
+	    	  	
+	    	  	if(status[i].getPath().getName().equals(WorkflowManager.WFXMLFILE)){
+	    	  		xmlFile = status[i].getPath();
+	    	  		LOG.info("find workflow xml file: "+xmlFile.getName());
+	    	  	}
+	    	  	LOG.info("file path: "+status[i].getPath().toString());
+	    	  	// this is how to read the file ...
+	//               BufferedReader br=new BufferedReader(new InputStreamReader(fs.open(status[i].getPath())));
+	//                  String line;
+	//                  line=br.readLine();
+	//                  while (line != null){
+	//                          LOG.info("file: " + line);
+	//                          line=br.readLine();
+	//                  }
+	      }
+      }
 	  return xmlFile;
   }
   
@@ -99,7 +107,7 @@ class WorkflowJobQueuesManager extends JobInProgressListener {
 	    	wfXmlFile = getXmlFile(jobDistCacheFiles);  
 	    }
 	    catch(IOException ioe){
-	    	LOG.info("error in findXmlFilePath: "+ ioe.getMessage());
+	    	LOG.error("error in findXmlFilePath: "+ ioe.getMessage());
 	    }
 	    return wfXmlFile;
   }
