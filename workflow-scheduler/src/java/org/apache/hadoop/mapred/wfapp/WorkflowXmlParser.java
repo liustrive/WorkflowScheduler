@@ -568,6 +568,7 @@ public class WorkflowXmlParser {
             Element workflowDeadline = global.getChild("deadline",ns);
             Element workflowPriority = global.getChild("priority", ns);
             Element workflowTrigger = global.getChild("trigger", ns);
+            Element actionName = global.getChild("actionname",ns);
             
             if(workflowDeadline!=null){
             	app.setDeadline(workflowDeadline.getText());
@@ -590,6 +591,10 @@ public class WorkflowXmlParser {
             if(workflowTrigger!=null){
             	String trigger = workflowTrigger.getText();
             	app.setTriggerJob(trigger);
+            }
+            if(actionName != null){
+                String name = actionName.getText();
+                app.setActionName(name);
             }
 
         }

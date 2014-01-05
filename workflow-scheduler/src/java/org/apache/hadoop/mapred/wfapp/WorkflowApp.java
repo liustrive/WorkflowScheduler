@@ -24,6 +24,7 @@ public class WorkflowApp{
     private String name;
     private String user;
     private String definition;
+    private String actionName;
     private WorkflowAppProcess appProcess;
     private int jobtofinish = 0;
     private int priority = 0; // 0 for normal, 1 for high, -1 for low, -10 for linger
@@ -113,7 +114,12 @@ public class WorkflowApp{
     public long getDeadline(){
     	return appProcess.deadline;
     }
-
+    public String getWfFileActionName(){
+    	return actionName;
+    }
+    public void setActionName(String name){
+    	actionName = name;
+    }
     public void setPriority(int pri){
     	priority = pri;
     }

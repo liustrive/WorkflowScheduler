@@ -183,13 +183,16 @@ public class WorkflowManager {
 		List<JobInProgress> jobtoInit = null;
 		List<JobID> avaiableJobs = null;
 		JobID jobID = job.getJobID();
-		String jobName = job.getProfile().getJobName();
+		// job.getJobName() normally is string of numbers
+//		String jobName = job.getProfile().getJobName();
+
 		waitingJobs.put(jobID, job);
 		try{
 			Reader br=new InputStreamReader(fs.open(xmlFilePath));
 			WorkflowXmlParser parser = new WorkflowXmlParser(null,ControlNodeHandler.class,DecisionNodeHandler.class,ActionNodeHandler.class);
 			WorkflowApp app = parser.validateAndParse(br);
 			app.setUser(job.getUser());
+			String jobName = app.getWfFileActionName();
 			String wfAppName = parseWFName(app);
 			if(waitingQueue.contains(wfAppName)){ // wf already loaded
 				app = workflowApps.get(wfAppName);
