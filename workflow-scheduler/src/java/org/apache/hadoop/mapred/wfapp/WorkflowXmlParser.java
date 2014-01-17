@@ -11,6 +11,8 @@ package org.apache.hadoop.mapred.wfapp;
 //import org.apache.oozie.service.Services;
 //import org.apache.oozie.service.ActionService;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.jdom.Element;
 import org.jdom.JDOMException;
@@ -75,7 +77,7 @@ public class WorkflowXmlParser {
     private static final String KILL_MESSAGE_E = "message";
     public static final String VALIDATE_FORK_JOIN = "oozie.validate.ForkJoin";
     public static final String WF_VALIDATE_FORK_JOIN = "oozie.wf.validate.ForkJoin";
-
+    private static final Log LOG = LogFactory.getLog(WorkflowXmlParser.class);
     private Schema schema;
     private Class<? extends ControlNodeHandler> controlNodeHandler;
     private Class<? extends DecisionNodeHandler> decisionHandlerClass;
@@ -572,6 +574,7 @@ public class WorkflowXmlParser {
             
             if(workflowDeadline!=null){
             	app.setDeadline(workflowDeadline.getText());
+            	LOG.info("Found deadline: "+ workflowDeadline.getText());
             }
             if(workflowPriority!=null){
             	String text = workflowPriority.getText();
@@ -591,10 +594,12 @@ public class WorkflowXmlParser {
             if(workflowTrigger!=null){
             	String trigger = workflowTrigger.getText();
             	app.setTriggerJob(trigger);
+            	LOG.info("trigger: "+trigger);
             }
             if(actionName != null){
                 String name = actionName.getText();
                 app.setActionName(name);
+                LOG.info("actionName: "+ name);
             }
 
         }
@@ -612,19 +617,24 @@ public class WorkflowXmlParser {
     			if(confName.equals("mapred.map.tasks")){
     				String confValue = jobConf.getChildText("value", actionNs);
     				nodeConf.mapTaskNum = Integer.parseInt(confValue);
+    				LOG.info("mapred.map.tasks: "+confValue);
     			}
     			else if(confName.equals("mapred.reduce.tasks")){
     				String confValue = jobConf.getChildText("value", actionNs);
     				nodeConf.reduceTaskNum = Integer.parseInt(confValue);
+    				LOG.info("mapred.reduce.tasks: "+confValue);
     			}
     			else if(confName.equals("mapred.job.queue.name")){
     				nodeConf.queueName = jobConf.getChildText("value", actionNs);
+    				LOG.info("mapred.reduce.tasks: "+nodeConf.queueName);
     			}
     			else if(confName.equals("mapred.input.dir")){
     				nodeConf.inputDir = jobConf.getChildText("value", actionNs);
+    				LOG.info("mapred.input.dir: "+nodeConf.inputDir);
     			}
     			else if(confName.equals("mapred.output.dir")){
     				nodeConf.outputDir = jobConf.getChildText("value", actionNs);
+    				LOG.info("mapred.output.dir: "+nodeConf.outputDir);
     			}
     		}
     		app.addJobConfig(jobName, nodeConf);
