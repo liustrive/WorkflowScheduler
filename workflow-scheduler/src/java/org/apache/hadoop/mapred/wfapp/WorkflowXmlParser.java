@@ -99,7 +99,12 @@ public class WorkflowXmlParser {
             this.topDecisionParent = topDecisionParent;
         }
     }
-
+    class WorkflowProperty{
+    	public String deadline = "";
+    	public int prority = 1024;
+    	public String trigger = "";
+    	public String actionName = "";
+    }
     private List<String> forkList = new ArrayList<String>();
     private List<String> joinList = new ArrayList<String>();
     private StartNodeDef startNode;
@@ -380,6 +385,7 @@ public class WorkflowXmlParser {
         Namespace ns = root.getNamespace();
         WorkflowApp def = null;
         Element global = null;
+        WorkflowProperty wfp = null;
         for (Element eNode : (List<Element>) root.getChildren()) {
             if (eNode.getName().equals(START_E)) {
                 def = new WorkflowApp(root.getAttributeValue(NAME_A), strDef,
@@ -462,7 +468,8 @@ public class WorkflowXmlParser {
                                         else {
                                             if (eNode.getName().equals(GLOBAL)) {
                                                 global = eNode;
-                                                handleGlobal(ns, global,def);
+                                                wfp = new WorkflowProperty();
+                                                handleGlobal(ns, global,wfp);
                                             }
                                             else {
                                                 if (eNode.getName().equals(PARAMETERS)) {
@@ -480,6 +487,16 @@ public class WorkflowXmlParser {
                     }
                 }
             }
+        }
+        if(wfp!=null){
+        	if(wfp.prority!=1024)
+        		def.setPriority(wfp.prority);
+        	if(!wfp.deadline.equals(""))
+        		def.setDeadline(wfp.deadline);
+        	if(!wfp.actionName.equals(""))
+        		def.setActionName(wfp.actionName);
+        	if(!wfp.trigger.equals(""))
+        		def.setTriggerJob(wfp.trigger);
         }
         return def;
     }
@@ -560,11 +577,11 @@ public class WorkflowXmlParser {
      * @param app
      * @throws WorkflowException
      */
-    private void handleGlobal(Namespace ns, Element global,WorkflowApp app) throws WorkflowException {
+    private void handleGlobal(Namespace ns, Element global,WorkflowProperty wfp) throws WorkflowException {
 
 
 
-        if (global != null) {
+        if (global != null && wfp != null) {
 
             // added deadline, priority, trigger
             Element workflowDeadline = global.getChild("deadline",ns);
@@ -573,32 +590,32 @@ public class WorkflowXmlParser {
             Element actionName = global.getChild("actionname",ns);
             
             if(workflowDeadline!=null){
-            	app.setDeadline(workflowDeadline.getText());
+            	wfp.deadline =workflowDeadline.getText();
             	LOG.info("Found deadline: "+ workflowDeadline.getText());
             }
             if(workflowPriority!=null){
             	String text = workflowPriority.getText();
             	if(HIGH_P.equalsIgnoreCase(text)){
-            		app.setPriority(1);
+            		wfp.prority = 1;
             	}
             	else if(NORMAL_P.equalsIgnoreCase(text)){
-            		app.setPriority(0);
+            		wfp.prority = 0;
             	}
             	else if(LOW_P.equalsIgnoreCase(text)){
-            		app.setPriority(-1);
+            		wfp.prority = -1;
             	}
             	else if(LINGER_P.equalsIgnoreCase(text)){
-            		app.setPriority(-10);
+            		wfp.prority = -10;
             	}
             }
             if(workflowTrigger!=null){
             	String trigger = workflowTrigger.getText();
-            	app.setTriggerJob(trigger);
+            	wfp.trigger = trigger;
             	LOG.info("trigger: "+trigger);
             }
             if(actionName != null){
                 String name = actionName.getText();
-                app.setActionName(name);
+                wfp.actionName = name;
                 LOG.info("actionName: "+ name);
             }
 
