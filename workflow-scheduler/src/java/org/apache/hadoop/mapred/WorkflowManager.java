@@ -199,6 +199,31 @@ public class WorkflowManager {
 			app.setUser(job.getUser());
 			jobName = app.getWfFileActionName();
 			wfAppName = parseWFName(app);
+			
+			if(waitingQueue.contains(wfAppName)){ // wf already loaded
+				app = workflowApps.get(wfAppName);
+				app.setActionNodeId(jobName, jobID);
+				avaiableJobs = app.availableJobs();
+				if(avaiableJobs.size()>0){
+					jobtoInit = new ArrayList<JobInProgress>();
+					for(JobID jobid : avaiableJobs){
+						jobtoInit.add(waitingJobs.get(jobid));
+					}
+				}
+				jobInWorkflow.put(jobID, wfAppName);
+			}
+			else{ // new wf app
+				workflowApps.put(wfAppName, app);
+				app.setActionNodeId(jobName, jobID);
+				avaiableJobs = app.availableJobs();
+				if(avaiableJobs.size()>0){
+					jobtoInit = new ArrayList<JobInProgress>();
+					for(JobID jobid : avaiableJobs){
+						jobtoInit.add(waitingJobs.get(jobid));
+					}
+				}
+				jobInWorkflow.put(jobID, wfAppName);
+			}
 		}
 		catch(IOException ioe){
 			LOG.error("error open xml cache file: "+ xmlFilePath.toString()+"\n"+ioe.getMessage());
@@ -206,33 +231,10 @@ public class WorkflowManager {
 		catch(WorkflowException wfe){
 			LOG.error("error parsing workflow xml file: "+ xmlFilePath.toString()+"\n"+wfe.getMessage());
 		}
-			
-		if(waitingQueue.contains(wfAppName)){ // wf already loaded
-			app = workflowApps.get(wfAppName);
-			app.setActionNodeId(jobName, jobID);
-			avaiableJobs = app.availableJobs();
-			if(avaiableJobs.size()>0){
-				jobtoInit = new ArrayList<JobInProgress>();
-				for(JobID jobid : avaiableJobs){
-					jobtoInit.add(waitingJobs.get(jobid));
-				}
-			}
-			jobInWorkflow.put(jobID, wfAppName);
+		if(jobtoInit==null){
+			jobtoInit = new ArrayList<JobInProgress>();
+			jobtoInit.add(job);
 		}
-		else{ // new wf app
-			workflowApps.put(wfAppName, app);
-			app.setActionNodeId(jobName, jobID);
-			avaiableJobs = app.availableJobs();
-			if(avaiableJobs.size()>0){
-				jobtoInit = new ArrayList<JobInProgress>();
-				for(JobID jobid : avaiableJobs){
-					jobtoInit.add(waitingJobs.get(jobid));
-				}
-			}
-			jobInWorkflow.put(jobID, wfAppName);
-		}
-	
-		
 		return jobtoInit;
 	}
 	private void deleteWorkflowApp(WorkflowApp app){
