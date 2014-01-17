@@ -623,15 +623,24 @@ public class WorkflowXmlParser {
         
     }
     
-    private void handleJobConfig(Element eActionConf, WorkflowApp app,String jobName){
+    @SuppressWarnings("unchecked")
+	private void handleJobConfig(Element eActionConf, WorkflowApp app,String jobName){
     	Namespace actionNs = eActionConf.getNamespace();
     	NodeConfig nodeConf = new NodeConfig();
+    	Element actionConfiguration = eActionConf.getChild("configuration", actionNs);
+        if (actionConfiguration == null) {
+            actionConfiguration = new Element("configuration", actionNs);
+            eActionConf.addContent(actionConfiguration);
+        }
     	if(eActionConf != null){
     		//get job config such as map/reduce task number, queue name, input/output dir.
     		
-    		for(Element jobConf : (List<Element>)eActionConf.getChildren()){
+    		for(Element jobConf : (List<Element>)actionConfiguration.getChildren()){
     			String confName = jobConf.getChildText("name", actionNs);
-    			if(confName.equals("mapred.map.tasks")){
+    			if(confName==null){
+    				continue;
+    			}
+    			else if(confName.equals("mapred.map.tasks")){
     				String confValue = jobConf.getChildText("value", actionNs);
     				nodeConf.mapTaskNum = Integer.parseInt(confValue);
     				LOG.info("mapred.map.tasks: "+confValue);
