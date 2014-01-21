@@ -18,6 +18,7 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -31,6 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -99,6 +101,19 @@ class WorkflowJobQueuesManager extends JobInProgressListener {
 	  	Path jobFilePath = new Path(job.jobFile);
 	    Path jobSubmitDir = jobFilePath.getParent();
 	    Path jobDistCacheFiles = JobSubmissionFiles.getJobDistCacheFiles(jobSubmitDir);
+	    try{
+		    Path[] localFiles = DistributedCache.getLocalCacheFiles(job.getJobConf());
+		    for(Path file : localFiles){
+		    	LOG.info("DistributedCache: find cache file: "+ file.getName());
+		    	if(WorkflowManager.WFXMLFILE.equalsIgnoreCase(file.getName())){
+		    		LOG.info("DistributedCache: find workflow xml file: "+file.getName());
+		    		return file;
+		    	}
+		    }
+	    }
+	    catch(IOException ioe){
+	    	LOG.error("Exception occur in findXmlFileviaDisCache: "+ ioe.getMessage());
+	    }
 	    Path wfXmlFile = null;
 	    //Liu edited 
 	    LOG.info("File Path: "+ job.jobFile+ ". JobSubmitDir: " + jobSubmitDir.toString()+". JobDistCacheFiles: "+ jobDistCacheFiles.toString());
@@ -175,33 +190,35 @@ class WorkflowJobQueuesManager extends JobInProgressListener {
     if(workflowManager.isWorkflowJob(job.getJobID())){
     	List<JobInProgress> newjobs = workflowManager.jobCompleted(job);
     	String wfAppName = workflowManager.getWfAppNameofJob(job.getJobID());
-    	for(JobInProgress newjob : newjobs){
-	   		 // add job to the right queue
-	   	    WorkflowSchedulerQueue tmpqueue = getQueue(newjob.getProfile().getQueueName());
-	   	    if (null == tmpqueue) {
-	   	      // job was submitted to a queue we're not aware of
-	   	      LOG.warn("Invalid queue " + newjob.getProfile().getQueueName() + 
-	   	          " specified for job" + newjob.getProfile().getJobID() + 
-	   	          ". Ignoring job.");
-	   	      return;
-	   	    }
-	   	    // --liu-- set workflow job as start
-	   	    workflowManager.setJobStart(newjob);
-	   	    try{
-	   	    	int rankInApp = workflowManager.getWfJobRank(newjob.getJobID());
-		   	    //  
-		   	    // add job to waiting queue. It will end up in the right place, 
-		   	    // based on priority, workflow it is in.
-		   	    //tmpqueue.addWaitingJob(newjob);
-	   	    	WorkflowJobSchedulingInfo wfJobSchedInfo = new WorkflowJobSchedulingInfo(newjob,wfAppName,rankInApp);
-	    	    tmpqueue.addWaitingJob(newjob, wfJobSchedInfo);
-		   	    // let scheduler know. 
-		   	    scheduler.jobAdded(newjob);
-	   	    }
-	   	    catch(IOException ioe){
-	   	    	LOG.error("error in jobCompleted: "+ ioe.getMessage());
-	   	    	LOG.error("Complete job: "+ job.getProfile().getJobName()+ " error new avaiablejob: "+ newjob.getProfile().getJobName());
-	   	    }
+    	if(newjobs!=null){
+	    	for(JobInProgress newjob : newjobs){
+		   		 // add job to the right queue
+		   	    WorkflowSchedulerQueue tmpqueue = getQueue(newjob.getProfile().getQueueName());
+		   	    if (null == tmpqueue) {
+		   	      // job was submitted to a queue we're not aware of
+		   	      LOG.warn("Invalid queue " + newjob.getProfile().getQueueName() + 
+		   	          " specified for job" + newjob.getProfile().getJobID() + 
+		   	          ". Ignoring job.");
+		   	      return;
+		   	    }
+		   	    // --liu-- set workflow job as start
+		   	    workflowManager.setJobStart(newjob);
+		   	    try{
+		   	    	int rankInApp = workflowManager.getWfJobRank(newjob.getJobID());
+			   	    //  
+			   	    // add job to waiting queue. It will end up in the right place, 
+			   	    // based on priority, workflow it is in.
+			   	    //tmpqueue.addWaitingJob(newjob);
+		   	    	WorkflowJobSchedulingInfo wfJobSchedInfo = new WorkflowJobSchedulingInfo(newjob,wfAppName,rankInApp);
+		    	    tmpqueue.addWaitingJob(newjob, wfJobSchedInfo);
+			   	    // let scheduler know. 
+			   	    scheduler.jobAdded(newjob);
+		   	    }
+		   	    catch(IOException ioe){
+		   	    	LOG.error("error in jobCompleted: "+ ioe.getMessage());
+		   	    	LOG.error("Complete job: "+ job.getProfile().getJobName()+ " error new avaiablejob: "+ newjob.getProfile().getJobName());
+		   	    }
+	    	}
     	}
     	// now update the workflow app process rate
     	updateWfAppProcess(wfAppName);

@@ -12,6 +12,8 @@ import java.util.Map;
 import java.util.Collection;
 import java.io.*;
 import java.util.Date;
+import java.util.regex.Pattern;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.FileSystem;
@@ -66,6 +68,9 @@ public class WorkflowManager {
 		String appName = app.getName();
 		String wfUser = app.getUser();
 		return wfUser+SEPERATOR+appName;
+	}
+	public String parseWFName(String appName,String userName){
+		return userName+SEPERATOR+appName;
 	}
 	public String getAppName(String WFName){
 		return WFName.substring(WFName.indexOf(SEPERATOR)+1);
@@ -178,61 +183,97 @@ public class WorkflowManager {
 		WorkflowApp app = workflowApps.get(jobInWorkflow.get(jobid));
 		return getWorkflowProcessRate(app);
 	}
-	
+	private Map<String,String> jobNameParser(String jobName){
+		Map<String,String> jobWFandAction = new HashMap<String,String>();
+		String[] split = jobName.split(":");
+		for(String tokens : split){
+			String [] token = tokens.split("=");
+			if(token.length==2){
+				jobWFandAction.put(token[0], token[1]);
+			}
+		}
+		return jobWFandAction;
+	}
 	public List<JobInProgress> jobAdded(JobInProgress job,Path xmlFilePath){
 		List<JobInProgress> jobtoInit = null;
 		List<JobID> avaiableJobs = null;
 		JobID jobID = job.getJobID();
 		// job.getJobName() normally is string of numbers
-//		String jobName = job.getProfile().getJobName();
-
-		waitingJobs.put(jobID, job);
-		Reader br=null;
-		WorkflowXmlParser parser = null;
-		WorkflowApp app = null;
-		String jobName = "";
+		// however it can be specified, "oozie:launcher:T=map-reduce:W=wordcount-wf:A=wordside:ID=0000025-140109225606903-oozie-liu-W" 
+		String jobName = job.getProfile().getJobName();
+		Map<String,String> jobWFandAction = jobNameParser(jobName);
+		String actionName = jobWFandAction.get("A");
+		String wfName = jobWFandAction.get("W");
 		String wfAppName = "";
-		try{
-			br=new InputStreamReader(fs.open(xmlFilePath));
-			parser = new WorkflowXmlParser(null,ControlNodeHandler.class,DecisionNodeHandler.class,ActionNodeHandler.class);
-			app = parser.validateAndParse(br);
-			app.setUser(job.getUser());
-			jobName = app.getWfFileActionName();
-			wfAppName = parseWFName(app);
+		if(wfName!=null){
+			wfAppName = parseWFName(wfName,job.getUser());
+		}
+		
+		waitingJobs.put(jobID, job);
+		WorkflowApp app = null;
+		// if the job name is specified
+		if(waitingQueue.contains(wfAppName)){
+			app = workflowApps.get(wfAppName);
+			app.setActionNodeId(actionName, jobID);
+			avaiableJobs = app.availableJobs();
+			if(avaiableJobs.size()>0){
+				jobtoInit = new ArrayList<JobInProgress>();
+				for(JobID jobid : avaiableJobs){
+					jobtoInit.add(waitingJobs.get(jobid));
+				}
+			}
+			jobInWorkflow.put(jobID, wfAppName);
+		}
+		// if job name not set correctly or its the first wf job submited, will parse the workflow.
+		else{
+			Reader br=null;
+			WorkflowXmlParser parser = null;
+
+	
 			
-			if(waitingQueue.contains(wfAppName)){ // wf already loaded
-				app = workflowApps.get(wfAppName);
-				app.setActionNodeId(jobName, jobID);
-				avaiableJobs = app.availableJobs();
-				if(avaiableJobs.size()>0){
-					jobtoInit = new ArrayList<JobInProgress>();
-					for(JobID jobid : avaiableJobs){
-						jobtoInit.add(waitingJobs.get(jobid));
+			try{
+				br=new InputStreamReader(fs.open(xmlFilePath));
+				parser = new WorkflowXmlParser(null,ControlNodeHandler.class,DecisionNodeHandler.class,ActionNodeHandler.class);
+				app = parser.validateAndParse(br);
+				app.setUser(job.getUser());
+				actionName = app.getWfFileActionName();
+				wfAppName = parseWFName(app);
+				
+				if(waitingQueue.contains(wfAppName)){ // wf already loaded
+					app = workflowApps.get(wfAppName);
+					app.setActionNodeId(actionName, jobID);
+					avaiableJobs = app.availableJobs();
+					if(avaiableJobs.size()>0){
+						jobtoInit = new ArrayList<JobInProgress>();
+						for(JobID jobid : avaiableJobs){
+							jobtoInit.add(waitingJobs.get(jobid));
+						}
 					}
+					jobInWorkflow.put(jobID, wfAppName);
 				}
-				jobInWorkflow.put(jobID, wfAppName);
-			}
-			else{ // new wf app
-				workflowApps.put(wfAppName, app);
-				app.setActionNodeId(jobName, jobID);
-				avaiableJobs = app.availableJobs();
-				if(avaiableJobs.size()>0){
-					jobtoInit = new ArrayList<JobInProgress>();
-					for(JobID jobid : avaiableJobs){
-						jobtoInit.add(waitingJobs.get(jobid));
+				else{ // new wf app
+					workflowApps.put(wfAppName, app);
+					app.setActionNodeId(actionName, jobID);
+					avaiableJobs = app.availableJobs();
+					if(avaiableJobs.size()>0){
+						jobtoInit = new ArrayList<JobInProgress>();
+						for(JobID jobid : avaiableJobs){
+							jobtoInit.add(waitingJobs.get(jobid));
+						}
 					}
+					jobInWorkflow.put(jobID, wfAppName);
 				}
-				jobInWorkflow.put(jobID, wfAppName);
 			}
-		}
-		catch(IOException ioe){
-			LOG.error("error open xml cache file: "+ xmlFilePath.toString()+"\n"+ioe.getMessage());
-		}
-		catch(WorkflowException wfe){
-			LOG.error("error parsing workflow xml file: "+ xmlFilePath.toString()+"\n"+wfe.getMessage());
+			catch(IOException ioe){
+				LOG.error("error open xml cache file: "+ xmlFilePath.toString()+"\n"+ioe.getMessage());
+			}
+			catch(WorkflowException wfe){
+				LOG.error("error parsing workflow xml file: "+ xmlFilePath.toString()+"\n"+wfe.getMessage());
+			}
 		}
 		if(jobtoInit==null){
 			jobtoInit = new ArrayList<JobInProgress>();
+			LOG.error("The workflowManager somehow didn't get the right avaiable job, adding it manually.");
 			jobtoInit.add(job);
 		}
 		return jobtoInit;
