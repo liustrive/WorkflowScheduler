@@ -434,8 +434,11 @@ class WorkflowTaskScheduler extends TaskScheduler {
         // if we find a task, return
         if (lookUpStatus == TaskLookupResult.LookUpStatus.LOCAL_TASK_FOUND ||
             lookUpStatus == TaskLookupResult.LookUpStatus.OFF_SWITCH_TASK_FOUND) {
-        LOG.info("task: "+ tlr.task.toString()+" from job: "+ tlr.job.getProfile().getJobName()+ " added to TaskTracker: "+ taskTracker.getTrackerName()+". Avaiable slots: "+availableSlots+". Job info: MAP(finished: "+tlr.job.finishedMapTasks+",total: "+tlr.job.numMapTasks+",running: "+tlr.job.runningMapTasks+"), REDUCE(finished: "+tlr.job.finishedReduceTasks+",total:"+tlr.job.numReduceTasks+",running:"+tlr.job.runningReduceTasks+")");
-          return tlr;
+        	
+        	LOG.info("Task: "+ tlr.task.toString()+" from job: "+ tlr.job.getProfile().getJobName()+ " added to TaskTracker: "+ taskTracker.getTrackerName());
+        	LOG.info("TTandJOB INFO_LOG: TT Avaiable slots: "+availableSlots+". Job info: MAP(finished: "+tlr.job.finishedMapTasks+",total: "+tlr.job.numMapTasks+",running: "+tlr.job.runningMapTasks+"), REDUCE(finished: "+tlr.job.finishedReduceTasks+",total:"+tlr.job.numReduceTasks+",running:"+tlr.job.runningReduceTasks+")");
+
+        	return tlr;
         }
         // if there was a memory mismatch, return
         else if (lookUpStatus == 
@@ -640,6 +643,8 @@ class WorkflowTaskScheduler extends TaskScheduler {
   WorkflowMemoryMatcher memoryMatcher = new WorkflowMemoryMatcher(this);
 
   static final Log LOG = LogFactory.getLog(WorkflowTaskScheduler.class);
+  static Map<String,Integer> MapSlotRemain; // set in my cluser
+  static Map<String,Integer> ReduceSlotRemain; // set in mapred-site.xml
   protected WorkflowJobQueuesManager jobQueuesManager;
   protected WorkflowSchedulerConf schedConf;
   /** whether scheduler has started or not */
@@ -1035,6 +1040,11 @@ class WorkflowTaskScheduler extends TaskScheduler {
     int currentMapSlots = taskTrackerStatus.countOccupiedMapSlots();
     int maxReduceSlots = taskTrackerStatus.getMaxReduceSlots();
     int currentReduceSlots = taskTrackerStatus.countOccupiedReduceSlots();
+    LOG.info("CLUSTER INFO_LOG:  max maps=" + taskTrackerStatus.getMaxMapSlots() + ", run maps=" + taskTrackerStatus.countMapTasks() + ", max reds=" + 
+        taskTrackerStatus.getMaxReduceSlots() + ", run reds=" + 
+        taskTrackerStatus.countReduceTasks() + ", map cap=" + 
+        mapClusterCapacity +"total run map="+c.getMapTasks()+", red cap = " + 
+        reduceClusterCapacity +"total run red="+c.getReduceTasks());
     if (LOG.isDebugEnabled()) {
       LOG.debug("TT asking for task, max maps=" + taskTrackerStatus.getMaxMapSlots() + 
         ", run maps=" + taskTrackerStatus.countMapTasks() + ", max reds=" + 
