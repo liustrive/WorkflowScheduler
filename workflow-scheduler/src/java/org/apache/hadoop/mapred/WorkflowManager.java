@@ -213,6 +213,7 @@ public class WorkflowManager {
 		WorkflowApp app = null;
 		// if the job name is specified
 		if(waitingQueue.contains(wfAppName)){
+			LOG.info("New wf job found, WorkflowApp:" +wfAppName+", actionName: "+ actionName);
 			app = workflowApps.get(wfAppName);
 			app.setActionNodeId(actionName, jobID);
 			avaiableJobs = app.availableJobs();
@@ -240,6 +241,7 @@ public class WorkflowManager {
 				wfAppName = parseWFName(app);
 				
 				if(waitingQueue.contains(wfAppName)){ // wf already loaded
+					LOG.info("New wf(existed) job found by parsing xml. WorkflowApp: " + wfAppName+ ", actionName: "+actionName);
 					app = workflowApps.get(wfAppName);
 					app.setActionNodeId(actionName, jobID);
 					avaiableJobs = app.availableJobs();
@@ -252,6 +254,7 @@ public class WorkflowManager {
 					jobInWorkflow.put(jobID, wfAppName);
 				}
 				else{ // new wf app
+					LOG.info("New wf submited. WorkflowApp: " + wfAppName+ ", actionName: "+actionName);
 					workflowApps.put(wfAppName, app);
 					app.setActionNodeId(actionName, jobID);
 					avaiableJobs = app.availableJobs();
