@@ -44,7 +44,7 @@ import org.apache.hadoop.mapred.wfapp.*;
  */
 class WorkflowJobQueuesManager extends JobInProgressListener {
   
-  private static final Log LOG = LogFactory.getLog(JobQueuesManager.class);
+  private static final Log LOG = LogFactory.getLog(WorkflowJobQueuesManager.class);
   private WorkflowTaskScheduler scheduler;
   private static WorkflowManager workflowManager = new WorkflowManager();
   public static Map<String,WorkflowAppProcess> eagerWfAppProcess = new HashMap<String,WorkflowAppProcess>();
@@ -76,7 +76,7 @@ class WorkflowJobQueuesManager extends JobInProgressListener {
       }
       if(status!=null){
 	      for (int i=0;i<status.length;i++){
-	    	  	
+	    	  	LOG.info("find cache file: "+ status[i].getPath().getName());
 	    	  	if(status[i].getPath().getName().equals(WorkflowManager.WFXMLFILE)){
 	    	  		xmlFile = status[i].getPath();
 	    	  		LOG.info("find workflow xml file: "+xmlFile.getName());

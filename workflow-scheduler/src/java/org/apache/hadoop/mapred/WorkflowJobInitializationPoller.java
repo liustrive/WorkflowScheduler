@@ -70,7 +70,7 @@ import org.apache.hadoop.util.StringUtils;
 public class WorkflowJobInitializationPoller extends Thread {
 
   private static final Log LOG = LogFactory
-      .getLog(JobInitializationPoller.class.getName());
+      .getLog(WorkflowJobInitializationPoller.class.getName());
 
   private WorkflowJobQueuesManager jobQueueManager;
   private long sleepInterval;

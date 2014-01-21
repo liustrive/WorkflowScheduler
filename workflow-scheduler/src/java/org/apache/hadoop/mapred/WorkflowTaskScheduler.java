@@ -403,6 +403,7 @@ class WorkflowTaskScheduler extends TaskScheduler {
           return obtainNewTask(taskTrackerStatus, job, true);
         } else {
           // Re-reserve the current tasktracker
+          // liu edit: hold up tasktracker for jobs that need more than 1 slot per task
           taskTracker.reserveSlots(type, job, availableSlots);
           
           if (LOG.isDebugEnabled()) {
@@ -433,6 +434,7 @@ class WorkflowTaskScheduler extends TaskScheduler {
         // if we find a task, return
         if (lookUpStatus == TaskLookupResult.LookUpStatus.LOCAL_TASK_FOUND ||
             lookUpStatus == TaskLookupResult.LookUpStatus.OFF_SWITCH_TASK_FOUND) {
+        LOG.info("task: "+ tlr.task.toString()+" from job: "+ tlr.job.getProfile().getJobName()+ " added to TaskTracker: "+ taskTracker.getTrackerName()+". Avaiable slots: "+availableSlots+". Job info: MAP(finished: "+tlr.job.finishedMapTasks+",total: "+tlr.job.numMapTasks+",running: "+tlr.job.runningMapTasks+"), REDUCE(finished: "+tlr.job.finishedReduceTasks+",total:"+tlr.job.numReduceTasks+",running:"+tlr.job.runningReduceTasks+")");
           return tlr;
         }
         // if there was a memory mismatch, return

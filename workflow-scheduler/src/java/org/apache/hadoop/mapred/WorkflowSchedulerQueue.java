@@ -54,7 +54,7 @@ import org.apache.hadoop.mapred.wfapp.*;
  **********************************************************************/
 class WorkflowSchedulerQueue {
   
-  static final Log LOG = LogFactory.getLog(WorkflowTaskScheduler.class);
+  static final Log LOG = LogFactory.getLog(WorkflowSchedulerQueue.class);
   
   private static class SlotsUsage {
     /** 
