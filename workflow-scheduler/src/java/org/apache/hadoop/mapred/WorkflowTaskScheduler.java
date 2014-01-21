@@ -1040,11 +1040,7 @@ class WorkflowTaskScheduler extends TaskScheduler {
     int currentMapSlots = taskTrackerStatus.countOccupiedMapSlots();
     int maxReduceSlots = taskTrackerStatus.getMaxReduceSlots();
     int currentReduceSlots = taskTrackerStatus.countOccupiedReduceSlots();
-    LOG.info("CLUSTER INFO_LOG:  max maps=" + taskTrackerStatus.getMaxMapSlots() + ", run maps=" + taskTrackerStatus.countMapTasks() + ", max reds=" + 
-        taskTrackerStatus.getMaxReduceSlots() + ", run reds=" + 
-        taskTrackerStatus.countReduceTasks() + ", map cap=" + 
-        mapClusterCapacity +"total run map="+c.getMapTasks()+", red cap = " + 
-        reduceClusterCapacity +"total run red="+c.getReduceTasks());
+
     if (LOG.isDebugEnabled()) {
       LOG.debug("TT asking for task, max maps=" + taskTrackerStatus.getMaxMapSlots() + 
         ", run maps=" + taskTrackerStatus.countMapTasks() + ", max reds=" + 
