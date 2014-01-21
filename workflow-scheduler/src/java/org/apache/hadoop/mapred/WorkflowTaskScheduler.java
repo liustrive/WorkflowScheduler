@@ -437,7 +437,7 @@ class WorkflowTaskScheduler extends TaskScheduler {
         	
         	LOG.info("Task: "+ tlr.task.toString()+" from job: "+ tlr.job.getProfile().getJobName()+ " added to TaskTracker: "+ taskTracker.getTrackerName());
         	LOG.info("TTandJOB INFO_LOG: TT Avaiable slots: "+availableSlots+". Job info: MAP(finished: "+tlr.job.finishedMapTasks+",total: "+tlr.job.numMapTasks+",running: "+tlr.job.runningMapTasks+"), REDUCE(finished: "+tlr.job.finishedReduceTasks+",total:"+tlr.job.numReduceTasks+",running:"+tlr.job.runningReduceTasks+")");
-
+        	
         	return tlr;
         }
         // if there was a memory mismatch, return
@@ -1104,7 +1104,19 @@ class WorkflowTaskScheduler extends TaskScheduler {
             tlr.getLookUpStatus()) {
         break;
       }
+      
+    //cluster info 
+      TaskTrackerStatus taskTrackerStatusInfo = taskTracker.getStatus();
+      ClusterStatus c = taskTrackerManager.getClusterStatus();
+      int mapClusterCapacity = c.getMaxMapTasks();
+      int reduceClusterCapacity = c.getMaxReduceTasks();
 
+      LOG.info("CLUSTER INFO_LOG:  max maps=" + taskTrackerStatusInfo.getMaxMapSlots() + ", run maps=" + taskTrackerStatusInfo.countMapTasks() + ", max reds=" + 
+    		  taskTrackerStatusInfo.getMaxReduceSlots() + ", run reds=" + 
+    		  taskTrackerStatusInfo.countReduceTasks() + ", map cap=" + 
+          mapClusterCapacity +"total run map="+c.getMapTasks()+", red cap = " + 
+          reduceClusterCapacity +"total run red="+c.getReduceTasks());
+      
       Task t = tlr.getTask();
       JobInProgress job = tlr.getJob();
 

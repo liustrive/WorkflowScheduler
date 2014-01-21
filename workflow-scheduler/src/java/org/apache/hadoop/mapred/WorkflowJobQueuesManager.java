@@ -102,13 +102,19 @@ class WorkflowJobQueuesManager extends JobInProgressListener {
 	    Path jobSubmitDir = jobFilePath.getParent();
 	    Path jobDistCacheFiles = JobSubmissionFiles.getJobDistCacheFiles(jobSubmitDir);
 	    try{
-		    Path[] localFiles = DistributedCache.getLocalCacheFiles(job.getJobConf());
-		    for(Path file : localFiles){
-		    	LOG.info("DistributedCache: find cache file: "+ file.getName());
-		    	if(WorkflowManager.WFXMLFILE.equalsIgnoreCase(file.getName())){
-		    		LOG.info("DistributedCache: find workflow xml file: "+file.getName());
-		    		return file;
-		    	}
+		    URI[] localFiles = DistributedCache.getCacheFiles(job.getJobConf());
+		    if(localFiles==null){
+		    	return null;
+		    }
+		    else{
+			    for(int i = 0;i< localFiles.length;i++){
+			    	Path file = new Path(localFiles[i].getPath());
+			    	LOG.info("DistributedCache: find cache file: "+ file.getName());
+			    	if(WorkflowManager.WFXMLFILE.equalsIgnoreCase(file.getName())){
+			    		LOG.info("DistributedCache: find workflow xml file: "+file.getName());
+			    		return file;
+			    	}
+			    }
 		    }
 	    }
 	    catch(IOException ioe){
