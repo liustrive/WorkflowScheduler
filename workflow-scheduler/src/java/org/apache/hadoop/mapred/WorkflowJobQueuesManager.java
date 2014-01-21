@@ -255,6 +255,7 @@ class WorkflowJobQueuesManager extends JobInProgressListener {
   }
   private void updateWfAppProcess(String wfAppName){
   	WorkflowApp app = workflowManager.getWorkflowApp(wfAppName);
+  	if(app!=null){
 	if(app.getDeadline()!=0){ // if this app does support deadline
     	if(eagerWfAppProcess.get(wfAppName)==null){
     		WorkflowAppProcess process = workflowManager.getWorkflowProcessRate(app);
@@ -269,6 +270,7 @@ class WorkflowJobQueuesManager extends JobInProgressListener {
     		}
     	}
 	}
+  	}
   }
   public JobSchedulingInfo getWorkflowJobSchedInfo(JobInProgress job){
 	  JobSchedulingInfo jobSchedInfo = null;

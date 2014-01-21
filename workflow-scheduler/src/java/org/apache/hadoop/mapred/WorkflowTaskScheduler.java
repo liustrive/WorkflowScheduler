@@ -1093,6 +1093,7 @@ class WorkflowTaskScheduler extends TaskScheduler {
     int availableSlots = maxMapSlots - currentMapSlots;
     boolean assignOffSwitch = true;
     int tasksToAssignAfterOffSwitch = this.maxTasksToAssignAfterOffSwitch;
+    
     while (availableSlots > 0) {
       mapScheduler.sortQueues();
       TaskLookupResult tlr = mapScheduler.assignTasks(taskTracker, 
@@ -1104,7 +1105,8 @@ class WorkflowTaskScheduler extends TaskScheduler {
             tlr.getLookUpStatus()) {
         break;
       }
-      
+      if(TaskLookupResult.LookUpStatus.LOCAL_TASK_FOUND == tlr.getLookUpStatus() ||
+    		  TaskLookupResult.LookUpStatus.OFF_SWITCH_TASK_FOUND == tlr.getLookUpStatus()){
     //cluster info 
       TaskTrackerStatus taskTrackerStatusInfo = taskTracker.getStatus();
       ClusterStatus c = taskTrackerManager.getClusterStatus();
@@ -1117,6 +1119,7 @@ class WorkflowTaskScheduler extends TaskScheduler {
           mapClusterCapacity +"total run map="+c.getMapTasks()+", red cap = " + 
           reduceClusterCapacity +"total run red="+c.getReduceTasks());
       
+      }
       Task t = tlr.getTask();
       JobInProgress job = tlr.getJob();
 
