@@ -141,8 +141,12 @@ class WorkflowJobQueuesManager extends JobInProgressListener {
     	List<JobInProgress> newjobs = workflowManager.jobAdded(job, xmlFile);
     	String wfAppName = workflowManager.getWfAppNameofJob(job.getJobID());
     	LOG.info("Workflow job: " + job.getProfile().getJobName()+ "is added. Belongs to wfapp: "+ wfAppName);
+    	// newjobs will should be null
     	for(JobInProgress newjob : newjobs){
     		 // add job to the right queue
+    		//but may contain some null pointers during debug
+    		if(newjob==null)
+    			continue;
     	    WorkflowSchedulerQueue queue = getQueue(newjob.getProfile().getQueueName());
     	    if (null == queue) {
     	      // job was submitted to a queue we're not aware of
@@ -199,6 +203,9 @@ class WorkflowJobQueuesManager extends JobInProgressListener {
     	if(newjobs!=null){
 	    	for(JobInProgress newjob : newjobs){
 		   		 // add job to the right queue
+	    		// may contain some null pointer during debug
+	    		if(newjob==null)
+	    			continue;
 		   	    WorkflowSchedulerQueue tmpqueue = getQueue(newjob.getProfile().getQueueName());
 		   	    if (null == tmpqueue) {
 		   	      // job was submitted to a queue we're not aware of
@@ -270,6 +277,9 @@ class WorkflowJobQueuesManager extends JobInProgressListener {
     		}
     	}
 	}
+  	}
+  	else{
+  		LOG.error(wfAppName + "not found in workflowapps.");
   	}
   }
   public JobSchedulingInfo getWorkflowJobSchedInfo(JobInProgress job){

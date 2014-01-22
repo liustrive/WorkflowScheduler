@@ -1077,6 +1077,18 @@ class WorkflowTaskScheduler extends TaskScheduler {
         reduceScheduler.assignTasks(taskTracker, availableSlots, true);
       if (TaskLookupResult.LookUpStatus.LOCAL_TASK_FOUND == tlr.getLookUpStatus()) {
         tasks.add(tlr.getTask());
+        //cluster info 
+        TaskTrackerStatus taskTrackerStatusInfo = taskTracker.getStatus();
+        ClusterStatus c = taskTrackerManager.getClusterStatus();
+        int mapClusterCapacity = c.getMaxMapTasks();
+        int reduceClusterCapacity = c.getMaxReduceTasks();
+
+        LOG.info("CLUSTER INFO_LOG:  max maps=" + taskTrackerStatusInfo.getMaxMapSlots() + ", run maps=" + taskTrackerStatusInfo.countMapTasks() + ", max reds=" + 
+      		  taskTrackerStatusInfo.getMaxReduceSlots() + ", run reds=" + 
+      		  taskTrackerStatusInfo.countReduceTasks() + ", map cap=" + 
+            mapClusterCapacity +", total run map="+c.getMapTasks()+", red cap = " + 
+            reduceClusterCapacity +", total run red="+c.getReduceTasks());
+        
       }
     }
   }
@@ -1112,8 +1124,8 @@ class WorkflowTaskScheduler extends TaskScheduler {
       LOG.info("CLUSTER INFO_LOG:  max maps=" + taskTrackerStatusInfo.getMaxMapSlots() + ", run maps=" + taskTrackerStatusInfo.countMapTasks() + ", max reds=" + 
     		  taskTrackerStatusInfo.getMaxReduceSlots() + ", run reds=" + 
     		  taskTrackerStatusInfo.countReduceTasks() + ", map cap=" + 
-          mapClusterCapacity +"total run map="+c.getMapTasks()+", red cap = " + 
-          reduceClusterCapacity +"total run red="+c.getReduceTasks());
+          mapClusterCapacity +", total run map="+c.getMapTasks()+", red cap = " + 
+          reduceClusterCapacity +", total run red="+c.getReduceTasks());
       
       }
       Task t = tlr.getTask();

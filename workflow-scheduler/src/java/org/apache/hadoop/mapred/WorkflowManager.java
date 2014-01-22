@@ -59,7 +59,11 @@ public class WorkflowManager {
 		return workflowApps.get(appName);
 	}
 	public String getWfAppNameofJob(JobID jobid){
-		return jobInWorkflow.get(jobid);
+		if(jobInWorkflow.containsKey(jobid))
+			return jobInWorkflow.get(jobid);
+		else{
+			return "";
+		}
 	}
 	public int getWfJobRank(JobID jobid){
 		return workflowApps.get(jobInWorkflow.get(jobid)).getNodeRank(jobid);
@@ -220,7 +224,13 @@ public class WorkflowManager {
 			if(avaiableJobs.size()>0){
 				jobtoInit = new ArrayList<JobInProgress>();
 				for(JobID jobid : avaiableJobs){
+					if(waitingJobs.get(jobid)!=null){
 					jobtoInit.add(waitingJobs.get(jobid));
+					LOG.info("add job to init: " + jobid.toString());
+					}
+					else{
+						LOG.info("trying to init some job none existed!");
+					}
 				}
 			}
 			jobInWorkflow.put(jobID, wfAppName);
@@ -248,7 +258,13 @@ public class WorkflowManager {
 					if(avaiableJobs.size()>0){
 						jobtoInit = new ArrayList<JobInProgress>();
 						for(JobID jobid : avaiableJobs){
-							jobtoInit.add(waitingJobs.get(jobid));
+							if(waitingJobs.get(jobid)!=null){
+								jobtoInit.add(waitingJobs.get(jobid));
+								LOG.info("add job to init: " + jobid.toString());
+							}
+							else{
+								LOG.info("trying to init some job none existed!");
+							}
 						}
 					}
 					jobInWorkflow.put(jobID, wfAppName);
@@ -261,7 +277,13 @@ public class WorkflowManager {
 					if(avaiableJobs.size()>0){
 						jobtoInit = new ArrayList<JobInProgress>();
 						for(JobID jobid : avaiableJobs){
-							jobtoInit.add(waitingJobs.get(jobid));
+							if(waitingJobs.get(jobid)!=null){
+								jobtoInit.add(waitingJobs.get(jobid));
+								LOG.info("add job to init: " + jobid.toString());
+							}
+							else{
+								LOG.info("trying to init some job none existed!");
+							}
 						}
 					}
 					jobInWorkflow.put(jobID, wfAppName);
@@ -319,7 +341,8 @@ public class WorkflowManager {
 		// delete from waiting jobs in case of JobInProgress being changed outside
 		completedJobs.put(jobid, job.desiredMaps()+job.desiredReduces());
 		waitingJobs.remove(jobid);
-		
+		// avaiablejob not needed right now
+		jobtoInit = null;
 		return jobtoInit;
 	}
 //	public List<JobID> getCriticalPath(String appName){
