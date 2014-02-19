@@ -279,7 +279,7 @@ class WorkflowJobQueuesManager extends JobInProgressListener {
 	}
   	}
   	else{
-  		LOG.error(wfAppName + "not found in workflowapps.");
+  		LOG.info(wfAppName + "not found in workflowapps.");
   	}
   }
   public JobSchedulingInfo getWorkflowJobSchedInfo(JobInProgress job){

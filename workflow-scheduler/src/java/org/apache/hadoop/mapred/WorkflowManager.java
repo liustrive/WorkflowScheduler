@@ -28,6 +28,7 @@ public class WorkflowManager {
 	private Map<JobID, String> jobInWorkflow = new HashMap<JobID, String>();
 	private Map<WorkflowApp, ArrayList<ArrayList<String>>> criticalPaths = new HashMap<WorkflowApp,ArrayList<ArrayList<String>>>();
 	private Map<JobID, Integer> completedJobs = new HashMap<JobID,Integer>();
+	private Map<JobID, WorkflowAppAction> jobAsActions = new HashMap<JobID,WorkflowAppAction>();
 	private List<String> waitingQueue = new ArrayList<String>();
 //	private List<String> workingQueue = new ArrayList<String>();
 	private Map<String,String> triggerQueueMap = new HashMap<String,String>();
@@ -220,6 +221,9 @@ public class WorkflowManager {
 			LOG.info("New wf job found, WorkflowApp:" +wfAppName+", actionName: "+ actionName);
 			app = workflowApps.get(wfAppName);
 			app.setActionNodeId(actionName, jobID);
+			jobtoInit = new ArrayList<JobInProgress>();
+			jobtoInit.add(job);
+			/*
 			avaiableJobs = app.availableJobs();
 			if(avaiableJobs.size()>0){
 				jobtoInit = new ArrayList<JobInProgress>();
@@ -233,6 +237,7 @@ public class WorkflowManager {
 					}
 				}
 			}
+			*/
 			jobInWorkflow.put(jobID, wfAppName);
 		}
 		// if job name not set correctly or its the first wf job submited, will parse the workflow.
@@ -254,38 +259,49 @@ public class WorkflowManager {
 					LOG.info("New wf(existed) job found by parsing xml. WorkflowApp: " + wfAppName+ ", actionName: "+actionName);
 					app = workflowApps.get(wfAppName);
 					app.setActionNodeId(actionName, jobID);
+					jobtoInit = new ArrayList<JobInProgress>();
+					jobtoInit.add(job);
+					/*
 					avaiableJobs = app.availableJobs();
 					if(avaiableJobs.size()>0){
 						jobtoInit = new ArrayList<JobInProgress>();
 						for(JobID jobid : avaiableJobs){
 							if(waitingJobs.get(jobid)!=null){
-								jobtoInit.add(waitingJobs.get(jobid));
-								LOG.info("add job to init: " + jobid.toString());
+							jobtoInit.add(waitingJobs.get(jobid));
+							LOG.info("add job to init: " + jobid.toString());
 							}
 							else{
 								LOG.info("trying to init some job none existed!");
 							}
 						}
 					}
+					*/
 					jobInWorkflow.put(jobID, wfAppName);
 				}
 				else{ // new wf app
 					LOG.info("New wf submited. WorkflowApp: " + wfAppName+ ", actionName: "+actionName);
+					//god I even forgot this
+					waitingQueue.add(wfAppName);
+					//
 					workflowApps.put(wfAppName, app);
 					app.setActionNodeId(actionName, jobID);
+					jobtoInit = new ArrayList<JobInProgress>();
+					jobtoInit.add(job);
+					/*
 					avaiableJobs = app.availableJobs();
 					if(avaiableJobs.size()>0){
 						jobtoInit = new ArrayList<JobInProgress>();
 						for(JobID jobid : avaiableJobs){
 							if(waitingJobs.get(jobid)!=null){
-								jobtoInit.add(waitingJobs.get(jobid));
-								LOG.info("add job to init: " + jobid.toString());
+							jobtoInit.add(waitingJobs.get(jobid));
+							LOG.info("add job to init: " + jobid.toString());
 							}
 							else{
 								LOG.info("trying to init some job none existed!");
 							}
 						}
 					}
+					*/
 					jobInWorkflow.put(jobID, wfAppName);
 				}
 			}
@@ -360,5 +376,9 @@ public class WorkflowManager {
 //			return null;
 //		}
 //	}
-	
+	private class WorkflowAppAction{
+		public String wfAppName;
+		public String actionName;
+		public int rank;
+	}
 }
