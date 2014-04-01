@@ -168,7 +168,11 @@ public class WorkflowManager {
    			dumpStr+=j.getProfile().getJobName();
    			dumpStr+=" MAP (finished:"+j.finishedMaps()+",total:"+j.desiredMaps()+",running:"+j.runningMaps()
    			+" ) REDUCE(running:"+ j.runningReduces()+", total:"+j.desiredReduces()
-   			+") progressRate:"+ ppr.progressRate + ", avgTaskTime:"+ ppr.avgMapTime+ ", numSlotNeeded:"+ppr.numSlotNeeded;
+   			+")";
+   			if(ppr!=null){
+   				dumpStr+="progressRate:"+ ppr.progressRate + ", avgTaskTime:"+ ppr.avgMapTime+ ", numSlotNeeded:"+ppr.numSlotNeeded;
+   			}
+   			 
    			LOG.info(dumpStr);
    		}
    	}
