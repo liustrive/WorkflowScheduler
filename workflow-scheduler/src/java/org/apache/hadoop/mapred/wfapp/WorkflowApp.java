@@ -541,7 +541,8 @@ public class WorkflowApp{
     		for(String tran : trans){
     			NodeDef tmpNode = getNode(tran);
     			if(tmpNode.getRank()>maxRank){
-    				maxRankNodes.clear();
+    				//get every path by now.
+//    				maxRankNodes.clear();
     				maxRankNodes.add(tmpNode);
     			}
     			else if(tmpNode.getRank()==maxRank){

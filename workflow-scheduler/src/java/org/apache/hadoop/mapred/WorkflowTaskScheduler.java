@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.*; // added Liu
 import org.apache.hadoop.io.*; // added Liu
 import org.apache.hadoop.util.*;// added Liu
 import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
+import org.apache.hadoop.mapred.WorkflowManager.PathProgressInfo;
 
 /**
  * A {@link TaskScheduler} that implements the requirements in HADOOP-3421
@@ -304,7 +305,7 @@ class WorkflowTaskScheduler extends TaskScheduler {
       TaskTrackerStatus taskTrackerStatus = taskTracker.getStatus();
       // we only look at jobs in the running queues, as these are the ones
       // who have been potentially initialized
-
+      String savingSlotForWfApp = "";
       for (JobInProgress j : queue.getRunningJobs()) {
         // only look at jobs that can be run. We ignore jobs that haven't 
         // initialized, or have completed but haven't been removed from the 
@@ -317,7 +318,28 @@ class WorkflowTaskScheduler extends TaskScheduler {
         if (!queue.assignSlotsToJob(type, j, j.getProfile().getUser())) {
           continue;
         }
-
+        
+       // Liu: Check to ensure if the job belongs to a Workflow App, it will not get more slots than needed
+        // if it reach the limits save the slot for other job in the workflow.
+        if(type==TaskType.MAP){
+	        JobID id = j.getJobID();
+	        WorkflowManager wfManager = WorkflowJobQueuesManager.workflowManager;
+	        // saving the slot for another job in the same workflow app
+	        if(!savingSlotForWfApp.equals("")){
+	        	if(!wfManager.getWfAppNameofJob(id).equals(savingSlotForWfApp)){
+	        		continue;
+	        	}
+	        }
+	     
+	        PathProgressInfo pathInfo = wfManager.getJobInPathRate(id);
+	        if(pathInfo!= null){
+	        	if(j.runningMaps()>= pathInfo.numSlotNeeded){
+	        		savingSlotForWfApp = wfManager.getWfAppNameofJob(id);
+	        		LOG.info("job: "+ j.getProfile().getJobName()+" reach its slot limit "+ j.runningMaps()+". saving slot for others in worklfow: "+ savingSlotForWfApp);
+	        		continue;
+	        	}
+	        }
+        }
         //If this job meets memory requirements. Ask the JobInProgress for
         //a task to be scheduled on the task tracker.
         //if we find a job then we pass it on.
@@ -332,7 +354,8 @@ class WorkflowTaskScheduler extends TaskScheduler {
                   TaskLookupResult.LookUpStatus.LOCAL_TASK_FOUND || 
               tlr.getLookUpStatus() == 
                   TaskLookupResult.LookUpStatus.OFF_SWITCH_TASK_FOUND) {
-            // we're successful in getting a task
+            // we're successful in getting a task..
+       	  
             return tlr;
           } else {
             //skip to the next job in the queue.
@@ -435,8 +458,11 @@ class WorkflowTaskScheduler extends TaskScheduler {
         if (lookUpStatus == TaskLookupResult.LookUpStatus.LOCAL_TASK_FOUND ||
             lookUpStatus == TaskLookupResult.LookUpStatus.OFF_SWITCH_TASK_FOUND) {
         	
-        	LOG.info("Task: "+ tlr.task.toString()+" from job: "+ tlr.job.getProfile().getJobName()+ " added to TaskTracker: "+ taskTracker.getTrackerName());
-        	LOG.info("TTandJOB INFO_LOG: TT Avaiable slots: "+availableSlots+". Job info: MAP(finished: "+tlr.job.finishedMapTasks+",total: "+tlr.job.numMapTasks+",running: "+tlr.job.runningMapTasks+"), REDUCE(finished: "+tlr.job.finishedReduceTasks+",total:"+tlr.job.numReduceTasks+",running:"+tlr.job.runningReduceTasks+")");
+        	LOG.info("Task: "+ tlr.task.toString()+" from job: "+ tlr.job.getProfile().getJobName()+ " added to TaskTracker: "+ taskTracker.getTrackerName()+"TT Avaiable slots: "+availableSlots);
+        	// dump the workflow jobs info
+        	WorkflowManager wfManager = WorkflowJobQueuesManager.workflowManager;
+        	wfManager.dumpJobInfo();
+        	//LOG.info("TTandJOB INFO_LOG: TT Avaiable slots: "+availableSlots+". Job info: MAP(finished: "+tlr.job.finishedMapTasks+",total: "+tlr.job.numMapTasks+",running: "+tlr.job.runningMapTasks+"), REDUCE(finished: "+tlr.job.finishedReduceTasks+",total:"+tlr.job.numReduceTasks+",running:"+tlr.job.runningReduceTasks+")");
         	
         	return tlr;
         }
