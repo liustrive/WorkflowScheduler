@@ -173,8 +173,8 @@ public class WorkflowManager {
    				dumpStr+="progressRate:"+ ppr.progressRate + ", avgTaskTime:"+ ppr.avgMapTime+ ", numSlotNeeded:"+ppr.numSlotNeeded;
    			}
    			 
-   			LOG.info(dumpStr);
    		}
+   		LOG.info(dumpStr);
    	}
     private long getTotalTaskTime(List<TaskInProgress> tips) {
       long totalTime = 0;
