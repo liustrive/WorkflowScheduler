@@ -222,7 +222,7 @@ public class WorkflowManager {
 					long totaltime = getTotalTaskTime(vct);
 					timeUsed+=totaltime;
 					numTotalTasks += job.desiredMaps();
-					numCompleteTasks += job.finishedMapTasks;
+					numCompleteTasks += job.finishedMaps();
 					//compute running ones..
 					Vector<TaskInProgress> vctrunning  = job.reportTasksInProgress(true, false);
 					for(TaskInProgress tip : vctrunning){
@@ -238,8 +238,8 @@ public class WorkflowManager {
 					JobCompleteInfo jc = completedJobs.get(id);
 					if(jc!=null){
 						numCompleteTasks+=jc.numMapTasks;
-						numTotalTasks +=numCompleteTasks;
-						timeUsed += jc.avgCompleteTaskTime * numCompleteTasks;
+						numTotalTasks +=jc.numMapTasks;
+						timeUsed += jc.avgCompleteTaskTime * jc.numMapTasks;
 					}
 					else{// this job havn't been submit yet , get task num from configuration file
 						NodeConfig jobConf = app.getJobConfig(jobName);
@@ -273,11 +273,12 @@ public class WorkflowManager {
 			ppi.numTaskRemain = numTotalTasks - numCompleteTasks - (int)(runningTime/avg);
 			ppi.numTotalTasks = numTotalTasks;
 			appProc.pathProgressInfo.put(index,ppi);
+			LOG.info("WorkflowProcessRate Info: maxDueTime: "+ maxDueTime+". Path info: timeUsed:"+ timeUsed+",numComplete:"+numCompleteTasks+",numTotalTasks:"+numTotalTasks);
 			if(maxDueTime < dueTime){
 				maxDueTime = dueTime;
 			}
 		}
-		LOG.info("WorkflowProcessRate Info: maxDueTime: "+ maxDueTime);
+		
 		// if no maxDueTime set, it means the workflow app is just started.
 		if(maxDueTime == 0){
 			// do nothing by far.
