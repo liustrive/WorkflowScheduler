@@ -245,12 +245,12 @@ public class WorkflowManager {
 						NodeConfig jobConf = app.getJobConfig(jobName);
 						if(jobConf.mapTaskNum != 0){
 							numTotalTasks += jobConf.mapTaskNum;
-							if(jobConf.reduceTaskNum != 0){
-								numTotalTasks += jobConf.reduceTaskNum;
-							}
-							else{
-								numTotalTasks += jobConf.mapTaskNum;
-							}
+//							if(jobConf.reduceTaskNum != 0){
+//								numTotalTasks += jobConf.reduceTaskNum;
+//							}
+//							else{
+//								numTotalTasks += jobConf.mapTaskNum;
+//							}
 						}
 						
 					}
@@ -472,7 +472,7 @@ public class WorkflowManager {
 	}
 	public List<JobInProgress> jobCompleted(JobInProgress job){
 		List<JobInProgress> jobtoInit = null;
-		List<JobID> avaiableJobs = null;
+//		List<JobID> avaiableJobs = null;
 		JobID jobid = job.getJobID();
 		String wfAppName = jobInWorkflow.get(jobid);
 		WorkflowApp app = workflowApps.get(wfAppName);
@@ -480,15 +480,16 @@ public class WorkflowManager {
 		
 		app.nodeFinished(jobid);
 		if(!app.finished()){
-			avaiableJobs = app.availableJobs();
-			if(avaiableJobs.size()>0){
-				jobtoInit = new ArrayList<JobInProgress>();
-				for(JobID avaiableid : avaiableJobs){
-					jobtoInit.add(waitingJobs.get(avaiableid));
-				}
-			}
+//			avaiableJobs = app.availableJobs();
+//			if(avaiableJobs.size()>0){
+//				jobtoInit = new ArrayList<JobInProgress>();
+//				for(JobID avaiableid : avaiableJobs){
+//					jobtoInit.add(waitingJobs.get(avaiableid));
+//				}
+//			}
 		}
 		else{
+			LOG.info("Workflow app: "+ parseWFName(app)+" has finished, deleing from list.");
 			deleteWorkflowApp(app);
 		}
 		// delete from waiting jobs in case of JobInProgress being changed outside
@@ -506,6 +507,8 @@ public class WorkflowManager {
 		jc.avgMapTaskTime = getAverageMapTime(job.reportTasksInProgress(true, true));
 		jc.startTime = job.launchTime;
 		jc.finishTime = job.finishTime;
+		completedJobs.put(job.getJobID(), jc);
+		
 	}
 //	public List<JobID> getCriticalPath(String appName){
 //		WorkflowApp app = workflowApps.get(appName);

@@ -79,7 +79,7 @@ public class WorkflowApp{
     	return appProcess;
     }
     public boolean finished(){
-    	if(jobtofinish==0){
+    	if(jobtofinish<=0){
     		return true;
     	}
     	else
