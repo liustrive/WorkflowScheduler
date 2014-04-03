@@ -207,15 +207,17 @@ public class WorkflowManager {
 			criticalPaths.put(app, criticalNames);
 		}
 		// find the slowest critical path, min {sum_completeTasks/sumTotalTasks}
-		int numCompleteTasks = 0;
-		int numTotalTasks = 0;
-		int numRunningMaps = 0;
-		long runningTime = 0;
+		
 		long maxDueTime = 0;
-		long timeUsed = 0;
+		
 		long currentTime = System.currentTimeMillis();
 		int index = 0;
 		for(List<String> jobNames : criticalNames){
+			int numCompleteTasks = 0;
+			int numTotalTasks = 0;
+			int numRunningMaps = 0;
+			long runningTime = 0;
+			long timeUsed = 0;
 			for(String jobName : jobNames){
 				JobID id = app.getNode(jobName).getJobId();
 				JobInProgress job = waitingJobs.get(id);
@@ -227,7 +229,7 @@ public class WorkflowManager {
 					//compute finished ones..
 					Vector<TaskInProgress> vct = job.reportTasksInProgress(true, true);
 					long totaltime = getTotalTaskTime(vct);
-					LOG.info("WFProgressRate of job:"+jobName+".jobName:"+job.getProfile().getJobName()+".f:"+job.finishedMaps()+".r:"+job.runningMaps()+"totaltime: "+totaltime);
+					LOG.info("WFProgressRate of job:"+jobName+".jobName:"+job.getProfile().getJobName()+".f:"+job.finishedMaps()+".r:"+job.runningMaps()+".totaltime: "+totaltime);
 					timeUsed+=totaltime;
 					numTotalTasks += job.desiredMaps();
 					numCompleteTasks += job.finishedMaps();
@@ -262,12 +264,12 @@ public class WorkflowManager {
 //								numTotalTasks += jobConf.mapTaskNum;
 //							}
 						}
-						LOG.info("WFProgressRate of job:"+jobName+" didn't find anywhere, numTasks:"+jobConf.mapTaskNum);
+						//LOG.info("WFProgressRate of job:"+jobName+" didn't find anywhere, numTasks:"+jobConf.mapTaskNum);
 					}
 				}
 			}
 			index++;
-			if(numCompleteTasks<1){
+			if(numCompleteTasks==0 || timeUsed==0){
 				// havn't start yet, will be scheduled due to node rank
 				continue;
 			}
@@ -283,10 +285,11 @@ public class WorkflowManager {
 			ppi.numTaskRemain = numTotalTasks - numCompleteTasks - (int)(runningTime/avg);
 			ppi.numTotalTasks = numTotalTasks;
 			appProc.pathProgressInfo.put(index,ppi);
-			LOG.info("WorkflowProcessRate Info: maxDueTime: "+ maxDueTime+". Path info: timeUsed:"+ timeUsed+",numComplete:"+numCompleteTasks+",numTotalTasks:"+numTotalTasks);
 			if(maxDueTime < dueTime){
 				maxDueTime = dueTime;
 			}
+			LOG.info("WorkflowProcessRate Info: maxDueTime: "+ maxDueTime+". Path info: timeUsed:"+ timeUsed+",numComplete:"+numCompleteTasks+",numTotalTasks:"+numTotalTasks+",dueTime:"+dueTime);
+			
 		}
 		
 		// if no maxDueTime set, it means the workflow app is just started.
