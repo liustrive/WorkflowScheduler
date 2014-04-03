@@ -569,7 +569,9 @@ public class WorkflowApp{
 	    	LOG.info("add new critical path:"+ newPath);
 	    	setCriticalPath(tmpNode,newPath);
     	}
-    	LOG.info("Somehow no node def found, node: "+node.getName());
+    	else{
+    		LOG.info("Somehow no node def found, node: "+node.getName());
+    	}
     }
 	public List<String> getCriticalPath() {
 		// TODO Auto-generated method stub

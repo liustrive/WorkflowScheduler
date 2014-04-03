@@ -185,7 +185,12 @@ public class WorkflowManager {
       }
       return totalTime;
     }
-
+    public void updateAllWfProcessRate(){
+    	for(WorkflowApp app : workflowApps.values()){
+    		LOG.info("Updating app: "+ app.getName());
+    		getWorkflowProcessRate(app);
+    	}
+    }
 	
 	/**
 	 * get the workflowapp which the job is in, and return the current process rate
@@ -216,12 +221,13 @@ public class WorkflowManager {
 				JobInProgress job = waitingJobs.get(id);
 				
 				if(job!=null){
-					LOG.info("WFProgressRate of job:"+jobName+".jobName:"+job.getProfile().getJobName()+".f:"+job.finishedMaps()+".r:"+job.runningMaps());
+					
 //					numCompleteTasks+=job.finishedMaps()+job.finishedReduces();
 					// get the exactly working progress of one path.
 					//compute finished ones..
 					Vector<TaskInProgress> vct = job.reportTasksInProgress(true, true);
 					long totaltime = getTotalTaskTime(vct);
+					LOG.info("WFProgressRate of job:"+jobName+".jobName:"+job.getProfile().getJobName()+".f:"+job.finishedMaps()+".r:"+job.runningMaps()+"totaltime: "+totaltime);
 					timeUsed+=totaltime;
 					numTotalTasks += job.desiredMaps();
 					numCompleteTasks += job.finishedMaps();
@@ -481,6 +487,7 @@ public class WorkflowManager {
 		return jobtoInit;
 	}
 	private void deleteWorkflowApp(WorkflowApp app){
+		LOG.info("Workflow App deleted: "+app.getName());
 		List<JobID> jobids = app.allActionNodesID();
 		for(JobID id : jobids){
 			waitingJobs.remove(id);
@@ -500,7 +507,7 @@ public class WorkflowManager {
 		JobID jobid = job.getJobID();
 		String wfAppName = jobInWorkflow.get(jobid);
 		WorkflowApp app = workflowApps.get(wfAppName);
-		addCompleteTasks(job,app);
+//		addCompleteTasks(job,app);
 		
 		app.nodeFinished(jobid);
 		if(!app.finished()){

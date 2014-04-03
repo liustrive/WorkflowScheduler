@@ -255,6 +255,7 @@ class WorkflowJobQueuesManager extends JobInProgressListener {
    */
   public void updateALLwfAppProcess(){
 	  for(WorkflowApp app : (Collection<WorkflowApp>)workflowManager.getAllWfApp()){
+		  LOG.info("Updating app:"+ app.getName());
 		  workflowManager.getWorkflowProcessRate(app);
 		  if(app.getDeadline()!=0){
 			  updateWfAppProcess(workflowManager.parseWFName(app));

@@ -445,7 +445,8 @@ class WorkflowTaskScheduler extends TaskScheduler {
         if (!queue.assignSlotsToQueue(type, 1)) {
           continue;
         }
-        
+        WorkflowManager wfManager = WorkflowJobQueuesManager.workflowManager;
+        wfManager.updateAllWfProcessRate();
         TaskLookupResult tlr = 
           getTaskFromQueue(taskTracker, availableSlots, queue, assignOffSwitch);
         TaskLookupResult.LookUpStatus lookUpStatus = tlr.getLookUpStatus();
@@ -460,7 +461,7 @@ class WorkflowTaskScheduler extends TaskScheduler {
         	
         	LOG.info("Task: "+ tlr.task.toString()+" from job: "+ tlr.job.getProfile().getJobName()+ " added to TaskTracker: "+ taskTracker.getTrackerName()+"TT Avaiable slots: "+availableSlots);
         	// dump the workflow jobs info
-        	WorkflowManager wfManager = WorkflowJobQueuesManager.workflowManager;
+        	
         	wfManager.dumpJobInfo();
         	//LOG.info("TTandJOB INFO_LOG: TT Avaiable slots: "+availableSlots+". Job info: MAP(finished: "+tlr.job.finishedMapTasks+",total: "+tlr.job.numMapTasks+",running: "+tlr.job.runningMapTasks+"), REDUCE(finished: "+tlr.job.finishedReduceTasks+",total:"+tlr.job.numReduceTasks+",running:"+tlr.job.runningReduceTasks+")");
         	
@@ -1056,7 +1057,7 @@ class WorkflowTaskScheduler extends TaskScheduler {
   public synchronized List<Task> assignTasks(TaskTracker taskTracker)
   throws IOException {    
 	// First: update all workflow app process, need to find out if this is too costly.
-	jobQueuesManager.updateALLwfAppProcess();
+//	jobQueuesManager.updateALLwfAppProcess();
 	// Then goes on...
     TaskTrackerStatus taskTrackerStatus = taskTracker.getStatus();
     ClusterStatus c = taskTrackerManager.getClusterStatus();
