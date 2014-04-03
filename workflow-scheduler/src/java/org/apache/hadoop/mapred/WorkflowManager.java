@@ -250,8 +250,8 @@ public class WorkflowManager {
 					if(jc!=null){
 						numCompleteTasks+=jc.numMapTasks;
 						numTotalTasks +=jc.numMapTasks;
-						timeUsed += jc.avgCompleteTaskTime * jc.numMapTasks;
-						LOG.info("WFProgressRate of job:"+jobName+" found in completeList. MapTasks:"+jc.numMapTasks+".avg:"+jc.avgCompleteTaskTime);
+						timeUsed += jc.avgMapTaskTime * jc.numMapTasks;
+						LOG.info("WFProgressRate of job:"+jobName+" found in completeList. MapTasks:"+jc.numMapTasks+".avg:"+jc.avgMapTaskTime);
 					}
 					else{// this job havn't been submit yet , get task num from configuration file
 						NodeConfig jobConf = app.getJobConfig(jobName);
@@ -268,7 +268,7 @@ public class WorkflowManager {
 					}
 				}
 			}
-			index++;
+		
 			if(numCompleteTasks==0 || timeUsed==0){
 				// havn't start yet, will be scheduled due to node rank
 				continue;
@@ -289,7 +289,7 @@ public class WorkflowManager {
 				maxDueTime = dueTime;
 			}
 			LOG.info("WorkflowProcessRate Info: maxDueTime: "+ maxDueTime+". Path info: timeUsed:"+ timeUsed+",numComplete:"+numCompleteTasks+",numTotalTasks:"+numTotalTasks+",dueTime:"+dueTime);
-			
+			index++;
 		}
 		
 		// if no maxDueTime set, it means the workflow app is just started.
@@ -297,8 +297,8 @@ public class WorkflowManager {
 			// do nothing by far.
 		}
 		else{
+			int index_set = 0;
 			for(List<String> jobNames : criticalNames){
-				int index_set = 0;
 				// reset progressrate of jobs on every path, running jobs only.
 				if(appProc.pathProgressInfo.containsKey(index_set)){
 					PathProgressInfo proInfo = appProc.pathProgressInfo.get(index_set);
@@ -320,6 +320,7 @@ public class WorkflowManager {
 						}
 					}
 				}
+				index_set++;
 			}
 		}
 		
