@@ -429,6 +429,25 @@ public class WorkflowManager {
 					app.setActionNodeId(actionName, jobID);
 					jobtoInit = new ArrayList<JobInProgress>();
 					jobtoInit.add(job);
+					
+					//test criticalPaths
+					ArrayList<ArrayList<String>> criticalNames = criticalPaths.get(app);
+					if(criticalNames == null){
+						List<String> paths = app.getCriticalPath();
+						criticalNames = parseCriticalNames(paths,app);
+						criticalPaths.put(app, criticalNames);
+					}
+					String str=  "CriticalPaths of app "+app.getName()+":";
+					int index = 0;
+					for(List<String> jobNames : criticalNames){
+						str+="Path "+index+":";
+						for(String name : jobNames){
+							str+=name+" ";
+						}
+						str+="\n";
+					}
+					LOG.info(str);
+					//
 					/*
 					avaiableJobs = app.availableJobs();
 					if(avaiableJobs.size()>0){
