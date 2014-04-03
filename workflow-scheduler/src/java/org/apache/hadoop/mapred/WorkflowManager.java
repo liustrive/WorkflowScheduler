@@ -14,6 +14,7 @@ import java.util.Collection;
 import java.io.*;
 import java.util.Date;
 import java.util.regex.Pattern;
+import java.math.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
@@ -64,7 +65,7 @@ public class WorkflowManager {
 	public class PathProgressInfo{
 		public long dueTime;
 		public float progressRate;
-		public float numSlotNeeded;
+		public int numSlotNeeded;
 		public long avgMapTime;
 		public int numTaskRemain;
 		public int numTotalTasks;
@@ -288,7 +289,7 @@ public class WorkflowManager {
 			if(maxDueTime < dueTime){
 				maxDueTime = dueTime;
 			}
-			LOG.info("WorkflowProcessRate Info: maxDueTime: "+ maxDueTime+". Path info: timeUsed:"+ timeUsed+",numComplete:"+numCompleteTasks+",numTotalTasks:"+numTotalTasks+",dueTime:"+dueTime);
+			LOG.info("WorkflowProcessRate Info: maxDueTime: "+ maxDueTime+". Path info: timeUsed:"+ timeUsed+",numComplete:"+numCompleteTasks+",numTotalTasks:"+numTotalTasks+",dueTime:"+dueTime+",processRate:"+progressRate);
 			index++;
 		}
 		
@@ -304,8 +305,10 @@ public class WorkflowManager {
 					PathProgressInfo proInfo = appProc.pathProgressInfo.get(index_set);
 					long timeRemains = maxDueTime - currentTime + app.getAppProcess().startTime;
 					float turns = (float)timeRemains/proInfo.avgMapTime;
-					if(maxDueTime != proInfo.dueTime)
-						proInfo.numSlotNeeded = proInfo.numTaskRemain/turns;
+					if(maxDueTime != proInfo.dueTime){
+						double slotNeed = proInfo.numTaskRemain/turns;
+						proInfo.numSlotNeeded = (int)Math.ceil(slotNeed);
+					}
 					else
 						proInfo.numSlotNeeded = proInfo.numTotalTasks;
 					
@@ -547,8 +550,8 @@ public class WorkflowManager {
 	}
 	private void addtoCompletedJobs(JobInProgress job){
 		JobCompleteInfo jc = new JobCompleteInfo();
-		jc.numMapTasks = job.numMapTasks;
-		jc.numRedTasks = job.numReduceTasks;
+		jc.numMapTasks = job.desiredMaps();
+		jc.numRedTasks = job.desiredReduces();
 		jc.avgMapTaskTime = getAverageMapTime(job.reportTasksInProgress(true, true));
 		jc.startTime = job.launchTime;
 		jc.finishTime = job.finishTime;

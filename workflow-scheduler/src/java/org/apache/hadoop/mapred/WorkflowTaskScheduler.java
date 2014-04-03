@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Vector;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -68,7 +69,7 @@ class WorkflowTaskScheduler extends TaskScheduler {
   /** quick way to get Queue object given a queue name */
   Map<String, WorkflowSchedulerQueue> queueInfoMap = 
     new HashMap<String, WorkflowSchedulerQueue>();
-  
+
   /**
    * This class captures scheduling information we want to display or log.
    */
@@ -113,7 +114,7 @@ class WorkflowTaskScheduler extends TaskScheduler {
     private LookUpStatus lookUpStatus;
     private Task task;
     private JobInProgress job;
-    
+
     // should not call this constructor directly. use static factory methods.
     private TaskLookupResult(Task t, JobInProgress job, LookUpStatus lUStatus) {
       this.task = t;
@@ -155,11 +156,18 @@ class WorkflowTaskScheduler extends TaskScheduler {
    * an abstract base class and have derived classes for Map and Reduce.  
    */
   static abstract class TaskSchedulingMgr {
-
+	public class TTSlotSaveInfo{
+		public int totalSavedNum;
+		public Map<JobID,Integer> slotForJob = new HashMap<JobID,Integer>();
+	}
     /** our TaskScheduler object */
     protected WorkflowTaskScheduler scheduler;
     protected TaskType type = null;
-
+    // slots saved from each wf's none-critical path jobs
+    private Map<JobID,Integer> slotSavedByJob = new HashMap<JobID,Integer>();
+    private static Map<TaskTracker, TTSlotSaveInfo> ttSlotSaved = new HashMap<TaskTracker,TTSlotSaveInfo>();
+    private Map<String, Integer> savingSlotForWfApp = new HashMap<String,Integer>();
+    private static int slotSaved =0;
     abstract TaskLookupResult obtainNewTask(TaskTrackerStatus taskTracker, 
         JobInProgress job, boolean assignOffSwitch) throws IOException;
 
@@ -305,7 +313,8 @@ class WorkflowTaskScheduler extends TaskScheduler {
       TaskTrackerStatus taskTrackerStatus = taskTracker.getStatus();
       // we only look at jobs in the running queues, as these are the ones
       // who have been potentially initialized
-      String savingSlotForWfApp = "";
+      
+      
       for (JobInProgress j : queue.getRunningJobs()) {
         // only look at jobs that can be run. We ignore jobs that haven't 
         // initialized, or have completed but haven't been removed from the 
@@ -325,17 +334,12 @@ class WorkflowTaskScheduler extends TaskScheduler {
 	        JobID id = j.getJobID();
 	        WorkflowManager wfManager = WorkflowJobQueuesManager.workflowManager;
 	        // saving the slot for another job in the same workflow app
-	        if(!savingSlotForWfApp.equals("")){
-	        	if(!wfManager.getWfAppNameofJob(id).equals(savingSlotForWfApp)){
-	        		continue;
-	        	}
-	        }
 	     
 	        PathProgressInfo pathInfo = wfManager.getJobInPathRate(id);
 	        if(pathInfo!= null){
-	        	if(j.runningMaps()>= pathInfo.numSlotNeeded){
-	        		savingSlotForWfApp = wfManager.getWfAppNameofJob(id);
-	        		LOG.info("job: "+ j.getProfile().getJobName()+" reach its slot limit "+ j.runningMaps()+". saving slot for others in worklfow: "+ savingSlotForWfApp);
+	        	if(j.runningMaps()> pathInfo.numSlotNeeded){
+	        		String WfAppKey = wfManager.getWfAppNameofJob(id);
+	        		LOG.info("job: "+ j.getProfile().getJobName()+" reach its slot limit "+ j.runningMaps()+". saving slot for others in worklfow: "+ WfAppKey);
 	        		continue;
 	        	}
 	        }
@@ -1129,11 +1133,15 @@ class WorkflowTaskScheduler extends TaskScheduler {
     boolean assignOffSwitch = true;
     int tasksToAssignAfterOffSwitch = this.maxTasksToAssignAfterOffSwitch;
     
-    while (availableSlots > 0) {
+    int trueSavedNum = 0;
+    while (availableSlots > trueSavedNum){
       mapScheduler.sortQueues();
       TaskLookupResult tlr = mapScheduler.assignTasks(taskTracker, 
                                                       availableSlots,
                                                       assignOffSwitch);
+      //TaskSchedulingMgr.TTSlotSaveInfo ttssi = TaskSchedulingMgr.ttSlotSaved.get(taskTracker);
+//      if(ttssi!=null)
+//    	  trueSavedNum = ttssi.totalSavedNum;
       if (TaskLookupResult.LookUpStatus.NO_TASK_FOUND == 
             tlr.getLookUpStatus() || 
           TaskLookupResult.LookUpStatus.TASK_FAILING_MEMORY_REQUIREMENT == 
