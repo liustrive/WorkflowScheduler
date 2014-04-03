@@ -354,6 +354,12 @@ public class WorkflowManager {
 		// job.getJobName() normally is string of numbers
 		// however it can be specified, "oozie:launcher:T=map-reduce:W=wordcount-wf:A=wordside:ID=0000025-140109225606903-oozie-liu-W" 
 		String jobName = job.getProfile().getJobName();
+		// if it is a launcher job, ignore
+		if(jobName.contains("launcher")){
+			jobtoInit = new ArrayList<JobInProgress>();
+			jobtoInit.add(job);
+			return jobtoInit;
+		}
 		Map<String,String> jobWFandAction = jobNameParser(jobName);
 		String actionName = jobWFandAction.get("A");
 		String wfName = jobWFandAction.get("W");
