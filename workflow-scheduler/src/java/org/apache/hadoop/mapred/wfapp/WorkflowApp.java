@@ -556,9 +556,10 @@ public class WorkflowApp{
     			setCriticalPath(nodes,path);
     		}
     	}
-    	else if(node instanceof JoinNodeDef){ 
+    	else if(node instanceof JoinNodeDef || node instanceof StartNodeDef){ 
     		List<String> trans = node.getTransitions();
     		String tran = trans.get(0);
+    		LOG.info("Forwarding to "+ tran);
     		setCriticalPath(getNode(tran),path);
     	}
     	else if(node instanceof ActionNodeDef){
@@ -568,10 +569,12 @@ public class WorkflowApp{
 	    	LOG.info("add new critical path:"+ newPath);
 	    	setCriticalPath(tmpNode,newPath);
     	}
+    	LOG.info("Somehow no node def found, node: "+node.getName());
     }
 	public List<String> getCriticalPath() {
 		// TODO Auto-generated method stub
 		if(criticalPath.size()==0){
+			LOG.info("starting to search paths. Begin with "+getNode(StartNodeDef.START).getName());
 			setCriticalPath(getNode(StartNodeDef.START),new String(""));
 			return criticalPath;
 		}
