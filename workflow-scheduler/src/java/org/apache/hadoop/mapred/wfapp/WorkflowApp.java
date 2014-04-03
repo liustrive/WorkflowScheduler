@@ -542,16 +542,17 @@ public class WorkflowApp{
     		int maxRank = 0;
     		for(String tran : trans){
     			NodeDef tmpNode = getNode(tran);
-    			if(tmpNode.getRank()>maxRank){
-    				//get every path by now.
-//    				maxRankNodes.clear();
+//    			if(tmpNode.getRank()>maxRank){
+//    				//get every path by now.
+////    				maxRankNodes.clear();
+//    				maxRankNodes.add(tmpNode);
+//    			}
+//    			else if(tmpNode.getRank()==maxRank){
     				maxRankNodes.add(tmpNode);
-    			}
-    			else if(tmpNode.getRank()==maxRank){
-    				maxRankNodes.add(tmpNode);
-    			}
+//    			}
     		}
     		for(NodeDef nodes : maxRankNodes){
+    			LOG.info("Forking to :"+ nodes.getName());
     			setCriticalPath(nodes,path);
     		}
     	}
