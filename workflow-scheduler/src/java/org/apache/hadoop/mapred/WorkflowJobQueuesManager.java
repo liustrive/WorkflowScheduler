@@ -137,7 +137,7 @@ class WorkflowJobQueuesManager extends JobInProgressListener {
     LOG.info("Job " + job.getJobID() + " submitted to queue " + 
         job.getProfile().getQueueName());
     Path xmlFile = findXmlFilePath(job);
-    if(xmlFile != null){
+    if(xmlFile != null && !job.getProfile().getJobName().contains("launcher")){
     	List<JobInProgress> newjobs = workflowManager.jobAdded(job, xmlFile);
     	String wfAppName = workflowManager.getWfAppNameofJob(job.getJobID());
     	LOG.info("Workflow job: " + job.getProfile().getJobName()+ "is added. Belongs to wfapp: "+ wfAppName);
