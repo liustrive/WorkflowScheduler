@@ -533,6 +533,7 @@ public class WorkflowApp{
     
     private void setCriticalPath(NodeDef node,String path){
     	if(node instanceof EndNodeDef || node instanceof KillNodeDef){
+    		LOG.info("endnode reached, path: "+ path);
     		criticalPath.add(path);
     	}
     	else if(node instanceof ForkNodeDef||node instanceof DecisionNodeDef){ // control node will equals the children's max rank
@@ -563,6 +564,7 @@ public class WorkflowApp{
 	    	List<String> transitions = node.getTransitions();
 	    	NodeDef tmpNode = getNode(transitions.get(0)); // ok to
 	    	String newPath = (path.length()==0)?node.getName():path+PATH_SEPARATOR+node.getName();
+	    	LOG.info("add new critical path:"+ newPath);
 	    	setCriticalPath(tmpNode,newPath);
     	}
     }
