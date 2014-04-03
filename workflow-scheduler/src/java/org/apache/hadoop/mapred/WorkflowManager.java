@@ -333,8 +333,12 @@ public class WorkflowManager {
 	 * @return
 	 */
 	public WorkflowAppProcess getWorkflowProcessRate(JobID jobid){
-		WorkflowApp app = workflowApps.get(jobInWorkflow.get(jobid));
-		return getWorkflowProcessRate(app);
+		String appName = jobInWorkflow.get(jobid);
+		if(appName!=null){
+			WorkflowApp app = workflowApps.get(appName);
+			return getWorkflowProcessRate(app);
+		}
+		return null;
 	}
 	private Map<String,String> jobNameParser(String jobName){
 		Map<String,String> jobWFandAction = new HashMap<String,String>();
