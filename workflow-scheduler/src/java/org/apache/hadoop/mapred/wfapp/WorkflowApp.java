@@ -223,6 +223,7 @@ public class WorkflowApp{
     	else{
     		if(node instanceof ActionNodeDef){
     			node.setJobId(id);
+    			LOG.info("job id: "+ id.toString() +"is set for job: "+ jobName);
     			if(nodesIdName.get(id)!=null)
     				LOG.info("job: "+ jobName +"'s id set more than once!");
     			nodesIdName.put(id, jobName);

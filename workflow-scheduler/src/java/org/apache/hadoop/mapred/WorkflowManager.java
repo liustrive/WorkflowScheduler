@@ -214,8 +214,10 @@ public class WorkflowManager {
 			for(String jobName : jobNames){
 				JobID id = app.getNode(jobName).getJobId();
 				JobInProgress job = waitingJobs.get(id);
+				
 				if(job!=null){
-					numCompleteTasks+=job.finishedMaps()+job.finishedReduces();
+					LOG.info("WFProgressRate of job:"+jobName+".jobName:"+job.getProfile().getJobName()+".f:"+job.finishedMaps()+".r:"+job.runningMaps());
+//					numCompleteTasks+=job.finishedMaps()+job.finishedReduces();
 					// get the exactly working progress of one path.
 					//compute finished ones..
 					Vector<TaskInProgress> vct = job.reportTasksInProgress(true, true);
@@ -235,11 +237,13 @@ public class WorkflowManager {
 					}
 				}
 				else{
+					
 					JobCompleteInfo jc = completedJobs.get(id);
 					if(jc!=null){
 						numCompleteTasks+=jc.numMapTasks;
 						numTotalTasks +=jc.numMapTasks;
 						timeUsed += jc.avgCompleteTaskTime * jc.numMapTasks;
+						LOG.info("WFProgressRate of job:"+jobName+" found in completeList. MapTasks:"+jc.numMapTasks+".avg:"+jc.avgCompleteTaskTime);
 					}
 					else{// this job havn't been submit yet , get task num from configuration file
 						NodeConfig jobConf = app.getJobConfig(jobName);
@@ -252,7 +256,7 @@ public class WorkflowManager {
 //								numTotalTasks += jobConf.mapTaskNum;
 //							}
 						}
-						
+						LOG.info("WFProgressRate of job:"+jobName+" didn't find anywhere, numTasks:"+jobConf.mapTaskNum);
 					}
 				}
 			}
