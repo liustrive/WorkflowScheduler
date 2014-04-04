@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.mapred;
 
-import java.io.IOException;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -36,12 +35,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.JobSubmissionFiles;// added Liu
-import org.apache.hadoop.fs.Path; // added Liu
 import org.apache.hadoop.fs.*; // added Liu
 import org.apache.hadoop.io.*; // added Liu
 import org.apache.hadoop.util.*;// added Liu
 import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
 import org.apache.hadoop.mapred.WorkflowManager.PathProgressInfo;
+import org.apache.hadoop.net.Node;
 
 /**
  * A {@link TaskScheduler} that implements the requirements in HADOOP-3421
@@ -163,11 +162,13 @@ class WorkflowTaskScheduler extends TaskScheduler {
     /** our TaskScheduler object */
     protected WorkflowTaskScheduler scheduler;
     protected TaskType type = null;
-    // slots saved from each wf's none-critical path jobs
+    // slots saved from each wf's none-critical path jobs. Do not need at present
     private Map<JobID,Integer> slotSavedByJob = new HashMap<JobID,Integer>();
     private static Map<TaskTracker, TTSlotSaveInfo> ttSlotSaved = new HashMap<TaskTracker,TTSlotSaveInfo>();
     private Map<String, Integer> savingSlotForWfApp = new HashMap<String,Integer>();
     private static int slotSaved =0;
+    // job on tasktracker info
+    private static Map<JobID,Vector<String>> jobOnTTName = new HashMap<JobID,Vector<String>>(); 
     abstract TaskLookupResult obtainNewTask(TaskTrackerStatus taskTracker, 
         JobInProgress job, boolean assignOffSwitch) throws IOException;
 
@@ -299,7 +300,23 @@ class WorkflowTaskScheduler extends TaskScheduler {
       }
       return (a + (b - 1)) / b;
     }
-    
+    private Vector<String> getLocalPlaceTT(JobInProgress job){
+    	Vector<String> Names= new Vector<String>();
+    	String tmpName=null;
+    	Map<Node, Set<TaskInProgress>> tasksMap = job.getRunningMapCache();
+    	int maxNum= 0;
+    	for(Node n : tasksMap.keySet()){
+    		int num = tasksMap.get(n).size();
+    		if(num>maxNum){
+    			maxNum = num;
+    			tmpName = n.getName(); // node name == tts.host
+    		}
+    	}
+    	if(tmpName!=null){
+    		Names.add(tmpName);
+    	}
+    	return Names;
+    }
     /*
      * This is the central scheduling method. // this modified by liu
      * It tries to get a task from jobs in a single queue. 
@@ -332,14 +349,30 @@ class WorkflowTaskScheduler extends TaskScheduler {
         // if it reach the limits save the slot for other job in the workflow.
         if(type==TaskType.MAP){
 	        JobID id = j.getJobID();
+	        
+	        // make sure job only run on some fixed node
+	        if(jobOnTTName.containsKey(id)){
+	        	if(!taskTracker.getStatus().getHost().equals(jobOnTTName.get(id).get(0))){
+	        		LOG.info("job "+j.getJobID().toString()+" will not run on "+ taskTracker.getStatus().getHost()+". Should be "+ jobOnTTName.get(id).get(0));
+	        		continue;
+	        	}
+	        }
+	        
 	        WorkflowManager wfManager = WorkflowJobQueuesManager.workflowManager;
 	        // saving the slot for another job in the same workflow app
-	     
+	        
 	        PathProgressInfo pathInfo = wfManager.getJobInPathRate(id);
 	        if(pathInfo!= null){
 	        	if(j.runningMaps()> pathInfo.numSlotNeeded){
 	        		String WfAppKey = wfManager.getWfAppNameofJob(id);
 	        		LOG.info("job: "+ j.getProfile().getJobName()+" reach its slot limit "+ j.runningMaps()+". saving slot for others in worklfow: "+ WfAppKey);
+	        		Vector<String> TTName = getLocalPlaceTT(j);
+	        		if(TTName.size()>0){
+	        			if(jobOnTTName.get(id)==null){
+	        				LOG.info("fixing the job to node:"+ TTName.get(0));
+	        				jobOnTTName.put(id, TTName);
+	        			}
+	        		}
 	        		continue;
 	        	}
 	        }
