@@ -303,16 +303,34 @@ class WorkflowTaskScheduler extends TaskScheduler {
     private Vector<String> getLocalPlaceTT(JobInProgress job){
     	Vector<String> Names= new Vector<String>();
     	String tmpName=null;
-    	Map<Node, Set<TaskInProgress>> tasksMap = job.getRunningMapCache();
+    	Map<Node, Set<TaskInProgress>> tasksMap = job.getRunningMapCache(); // The node won't work, because rack level node always have the most task
+    	
     	int maxNum= 0;
+    	Node maxNode=null;
     	for(Node n : tasksMap.keySet()){
     		int num = tasksMap.get(n).size();
     		if(num>maxNum){
     			maxNum = num;
     			tmpName = n.getName(); // node name == tts.host
+    			maxNode = n;
     		}
     	}
+    	
     	if(tmpName!=null){
+    		Set<TaskInProgress> st = tasksMap.get(maxNode);
+    		int maxTT = 0;
+    		Map<String,Integer> taskOnTT = new HashMap<String,Integer>();
+    		for(TaskInProgress tip : st){
+    			for(String tt : tip.getActiveTasks().values()){
+    				if(taskOnTT.containsKey(tt)){
+    					int num = taskOnTT.get(tt)+1;
+    					taskOnTT.put(tt, num);
+    					if(num> maxTT){
+    						tmpName = tt;
+    					}
+    				}
+    			}
+    		}
     		Names.add(tmpName);
     	}
     	return Names;
@@ -352,7 +370,7 @@ class WorkflowTaskScheduler extends TaskScheduler {
 	        
 	        // make sure job only run on some fixed node
 	        if(jobOnTTName.containsKey(id)){
-	        	if(!taskTracker.getStatus().getHost().equals(jobOnTTName.get(id).get(0))){
+	        	if(!taskTracker.getStatus().getTrackerName().equals(jobOnTTName.get(id).get(0))){
 	        		LOG.info("job "+j.getJobID().toString()+" will not run on "+ taskTracker.getStatus().getHost()+". Should be "+ jobOnTTName.get(id).get(0));
 	        		continue;
 	        	}
