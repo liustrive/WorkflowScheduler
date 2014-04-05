@@ -26,6 +26,9 @@ public class WorkflowManager {
 	public static final String WFXMLFILE = "workflow.xml";
 	private Map<String, Long> workflowDeadline = new HashMap<String,Long>();
 	private Map<String, WorkflowApp> workflowApps = new HashMap<String, WorkflowApp>();
+	// keep running job number of each workflow app
+	private Map<String, Integer> runningApps = new HashMap<String,Integer>();
+	private Map<String, Integer> limitedJobsofApps = new HashMap<String,Integer>();
 	//2014- wf progress update
 	private Map<JobID,JobCompleteInfo> completedJobs = new HashMap<JobID,JobCompleteInfo>();
 	//
@@ -34,7 +37,7 @@ public class WorkflowManager {
 	private Map<JobID, PathProgressInfo> jobInWfPath = new HashMap<JobID,PathProgressInfo>();
 	private Map<WorkflowApp, ArrayList<ArrayList<String>>> criticalPaths = new HashMap<WorkflowApp,ArrayList<ArrayList<String>>>();
 //	private Map<JobID, Integer> completedJobs = new HashMap<JobID,Integer>();
-	private Map<JobID, WorkflowAppAction> jobAsActions = new HashMap<JobID,WorkflowAppAction>();
+//	private Map<JobID, WorkflowAppAction> jobAsActions = new HashMap<JobID,WorkflowAppAction>();
 	private List<String> waitingQueue = new ArrayList<String>();
 //	private List<String> workingQueue = new ArrayList<String>();
 	private Map<String,String> triggerQueueMap = new HashMap<String,String>();
@@ -69,6 +72,39 @@ public class WorkflowManager {
 		public long avgMapTime;
 		public int numTaskRemain;
 		public int numTotalTasks;
+	}
+	public boolean shouldLimitSlot(JobID jobid){
+		String wfName = jobInWorkflow.get(jobid);
+		if(wfName==null)
+			return false;
+		if(!runningApps.containsKey(jobid)){
+			LOG.info("Why "+jobid.toString() +" wasn't in runningApps?");
+			return false;
+		}
+		else{
+			int num = runningApps.get(wfName);
+			if(limitedJobsofApps.containsKey(wfName)){
+				int limited = limitedJobsofApps.get(wfName);
+				if(limited+1>=num){
+					return false;
+				}
+				else
+					return true;
+			}
+			else{
+				return true;
+			}
+		}
+	}
+	public void addLimitedJobs(JobID jobid){
+		String wfName = jobInWorkflow.get(jobid);
+		if(wfName!=null && limitedJobsofApps.containsKey(jobid)){
+			int num = limitedJobsofApps.get(wfName);
+			limitedJobsofApps.put(wfName, num+1);
+		}
+		else{
+			limitedJobsofApps.put(wfName, 1);
+		}
 	}
 	public boolean isWorkflowJob(JobID jobid){
 		if(jobInWorkflow.containsKey(jobid)){
@@ -378,7 +414,14 @@ public class WorkflowManager {
 		if(wfName!=null){
 			wfAppName = parseWFName(wfName,job.getUser());
 		}
-		
+		// maintain the running job number of apps
+		if(runningApps.containsKey(wfAppName)){
+			int num = runningApps.get(wfAppName)+1;
+			runningApps.put(wfAppName, num);
+		}
+		else{
+			runningApps.put(wfAppName, 1);
+		}
 		waitingJobs.put(jobID, job);
 		WorkflowApp app = null;
 		// if the job name is specified
@@ -388,6 +431,7 @@ public class WorkflowManager {
 			app.setActionNodeId(actionName, jobID);
 			jobtoInit = new ArrayList<JobInProgress>();
 			jobtoInit.add(job);
+			
 			/*
 			avaiableJobs = app.availableJobs();
 			if(avaiableJobs.size()>0){
@@ -525,7 +569,14 @@ public class WorkflowManager {
 		String wfAppName = jobInWorkflow.get(jobid);
 		WorkflowApp app = workflowApps.get(wfAppName);
 //		addCompleteTasks(job,app);
-		
+		// maintain the running jobs number of apps
+		if(runningApps.containsKey(wfAppName)){
+			int num = runningApps.get(wfAppName)+1;
+			runningApps.put(wfAppName, num);
+		}
+		else{
+			runningApps.put(wfAppName, 1);
+		}
 		app.nodeFinished(jobid);
 		if(!app.finished()){
 //			avaiableJobs = app.availableJobs();

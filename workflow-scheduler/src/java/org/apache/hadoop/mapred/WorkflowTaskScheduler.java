@@ -307,8 +307,15 @@ class WorkflowTaskScheduler extends TaskScheduler {
     	Map<Node, Set<TaskInProgress>> tasksMap = job.getRunningMapCache(); // The node won't work, because rack level node always have the most task
 
     	
-    	Node maxNode= (Node)tasksMap.keySet().toArray()[0];
-    	
+    	Node maxNode= null;//(Node)tasksMap.keySet().toArray()[0];
+    	int minLevel = 1024;
+    	for(Node n : tasksMap.keySet()){
+    		int lv = n.getLevel();
+    		if(lv<minLevel){
+    			minLevel = lv;
+    			maxNode = n;
+    		}
+    	}
     	if(maxNode!=null){
     		Set<TaskInProgress> st = tasksMap.get(maxNode);
     		int maxTT = 0;
@@ -387,10 +394,11 @@ class WorkflowTaskScheduler extends TaskScheduler {
 	        		String WfAppKey = wfManager.getWfAppNameofJob(id);
 	        		LOG.info("job: "+ j.getProfile().getJobName()+" reach its slot limit "+ j.runningMaps()+". saving slot for others in worklfow: "+ WfAppKey);
 	        		Vector<String> TTName = getLocalPlaceTT(j);
-	        		if(TTName.size()>0){
+	        		if(TTName.size()>0 && wfManager.shouldLimitSlot(id)){
 	        			if(jobOnTTName.get(id)==null){
 	        				LOG.info("fixing the job to node:"+ TTName.get(0));
 	        				jobOnTTName.put(id, TTName);
+	        				wfManager.addLimitedJobs(id);
 	        			}
 	        		}
 	        		continue;
