@@ -248,7 +248,7 @@ public class WorkflowManager {
 		long maxDueTime = 0;
 		
 		long currentTime = System.currentTimeMillis();
-		int index = 0;
+		int index = -1;
 		for(List<String> jobNames : criticalNames){
 			int numCompleteTasks = 0;
 			int numTotalTasks = 0;
