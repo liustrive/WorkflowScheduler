@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.TreeMap;
 import java.util.Vector;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -304,30 +305,30 @@ class WorkflowTaskScheduler extends TaskScheduler {
     	Vector<String> Names= new Vector<String>();
     	String tmpName=null;
     	Map<Node, Set<TaskInProgress>> tasksMap = job.getRunningMapCache(); // The node won't work, because rack level node always have the most task
+
     	
-    	int maxNum= 0;
-    	Node maxNode=null;
-    	for(Node n : tasksMap.keySet()){
-    		int num = tasksMap.get(n).size();
-    		if(num>maxNum){
-    			maxNum = num;
-    			tmpName = n.getName(); // node name == tts.host
-    			maxNode = n;
-    		}
-    	}
+    	Node maxNode= (Node)tasksMap.keySet().toArray()[0];
     	
-    	if(tmpName!=null){
+    	if(maxNode!=null){
     		Set<TaskInProgress> st = tasksMap.get(maxNode);
     		int maxTT = 0;
     		Map<String,Integer> taskOnTT = new HashMap<String,Integer>();
     		for(TaskInProgress tip : st){
-    			for(String tt : tip.getActiveTasks().values()){
+    			
+    			for(TaskAttemptID taid : tip.getActiveTasks().keySet()){
+    				String tt = tip.machineWhereTaskRan(taid);
+    				LOG.info("task "+taid.toString()+" runs on "+tt);
+    				
     				if(taskOnTT.containsKey(tt)){
     					int num = taskOnTT.get(tt)+1;
     					taskOnTT.put(tt, num);
     					if(num> maxTT){
+    						maxTT=num;
     						tmpName = tt;
     					}
+    				}
+    				else{
+    					taskOnTT.put(tt, 1);
     				}
     			}
     		}
@@ -362,19 +363,20 @@ class WorkflowTaskScheduler extends TaskScheduler {
         if (!queue.assignSlotsToJob(type, j, j.getProfile().getUser())) {
           continue;
         }
-        
+        JobID id = j.getJobID();
+        // make sure job only run on some fixed node
+        if(jobOnTTName.containsKey(id)){
+        	if(!taskTracker.getStatus().getTrackerName().equals(jobOnTTName.get(id).get(0))){
+        		LOG.info("job "+j.getJobID().toString()+" will not run on "+ taskTracker.getStatus().getTrackerName()+". Should be "+ jobOnTTName.get(id).get(0));
+        		continue;
+        	}
+        }
        // Liu: Check to ensure if the job belongs to a Workflow App, it will not get more slots than needed
         // if it reach the limits save the slot for other job in the workflow.
         if(type==TaskType.MAP){
-	        JobID id = j.getJobID();
 	        
-	        // make sure job only run on some fixed node
-	        if(jobOnTTName.containsKey(id)){
-	        	if(!taskTracker.getStatus().getTrackerName().equals(jobOnTTName.get(id).get(0))){
-	        		LOG.info("job "+j.getJobID().toString()+" will not run on "+ taskTracker.getStatus().getHost()+". Should be "+ jobOnTTName.get(id).get(0));
-	        		continue;
-	        	}
-	        }
+	        
+
 	        
 	        WorkflowManager wfManager = WorkflowJobQueuesManager.workflowManager;
 	        // saving the slot for another job in the same workflow app
