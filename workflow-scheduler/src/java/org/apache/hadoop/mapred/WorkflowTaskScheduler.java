@@ -341,8 +341,8 @@ class WorkflowTaskScheduler extends TaskScheduler {
     				}
     			}
     		}
-
-   			Names.add(tmpName);
+    		if(tmpName!=null)
+    			Names.add(tmpName);
     	}
     	return Names;
     }
@@ -396,14 +396,17 @@ class WorkflowTaskScheduler extends TaskScheduler {
 	        	if(j.runningMaps()> pathInfo.numSlotNeeded){
 	        		String WfAppKey = wfManager.getWfAppNameofJob(id);
 	        		LOG.info("job: "+ j.getProfile().getJobName()+" reach its slot limit "+ j.runningMaps()+". saving slot for others in worklfow: "+ WfAppKey);
-	        		Vector<String> TTName = getLocalPlaceTT(j);
-	        		if(TTName.size()>0 && wfManager.shouldLimitSlot(id)){
-	        			if(jobOnTTName.get(id)==null){
-	        				LOG.info("fixing the job to node:"+ TTName.get(0));
-	        				jobOnTTName.put(id, TTName);
-	        				wfManager.addLimitedJobs(id);
-	        			}
+	        		if(!jobOnTTName.containsKey(id)){
+	        			Vector<String> TTName = getLocalPlaceTT(j);
+	        			if(TTName.size()>0 && wfManager.shouldLimitSlot(id)){
+		        			if(jobOnTTName.get(id)==null){
+		        				LOG.info("fixing the job to node:"+ TTName.get(0));
+		        				jobOnTTName.put(id, TTName);
+		        				wfManager.addLimitedJobs(id);
+		        			}
+		        		}
 	        		}
+	        		
 	        		continue;
 	        	}
 	        }
@@ -1229,7 +1232,8 @@ class WorkflowTaskScheduler extends TaskScheduler {
       }
       Task t = tlr.getTask();
       JobInProgress job = tlr.getJob();
-
+      
+      
       tasks.add(t);
 
       if (tasks.size() >= maxTasksPerHeartbeat) {

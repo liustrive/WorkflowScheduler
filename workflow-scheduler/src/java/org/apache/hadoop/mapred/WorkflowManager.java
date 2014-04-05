@@ -66,6 +66,7 @@ public class WorkflowManager {
 		
 	}
 	public class PathProgressInfo{
+		public long startTime;
 		public long dueTime;
 		public float progressRate;
 		public int numSlotNeeded;
@@ -82,17 +83,23 @@ public class WorkflowManager {
 			return false;
 		}
 		else{
-			int num = runningApps.get(wfName);
-			if(limitedJobsofApps.containsKey(wfName)){
-				int limited = limitedJobsofApps.get(wfName);
-				if(limited+1>=num){
-					return false;
-				}
-				else
-					return true;
+			Integer num = runningApps.get(wfName);
+			if(num==null){
+				LOG.info(wfName+ " is not in workflow app list!");
+				return false;
 			}
 			else{
-				return true;
+				if(limitedJobsofApps.containsKey(wfName)){
+					int limited = limitedJobsofApps.get(wfName);
+					if(limited+1>=num.intValue()){
+						return false;
+					}
+					else
+						return true;
+				}
+				else{
+					return true;
+				}
 			}
 		}
 	}
@@ -192,8 +199,8 @@ public class WorkflowManager {
    private long getAverageMapTime(List<TaskInProgress> completedMaps) {
 
       int numCompletedMaps = completedMaps.size();
-      long mapTime = getTotalTaskTime(completedMaps);
-      return mapTime / numCompletedMaps;
+      RunningTaskInfo rti = getTotalTaskTime(completedMaps);
+      return rti.totalTime / numCompletedMaps;
     }
    /**
     * print all workflow jobs's running info.
@@ -213,14 +220,29 @@ public class WorkflowManager {
    		}
    		LOG.info(dumpStr);
    	}
-    private long getTotalTaskTime(List<TaskInProgress> tips) {
+   	class RunningTaskInfo{
+   		public long totalTime;
+   		public long earliestTime;
+   	}
+    private RunningTaskInfo getTotalTaskTime(List<TaskInProgress> tips) {
+      RunningTaskInfo rti = new RunningTaskInfo();
       long totalTime = 0;
+      long earliestTime = -1;
       for (TaskInProgress tip: tips) {
+    	
         long start = tip.getExecStartTime();
         long finish = tip.getExecFinishTime();
         totalTime += finish - start;
+        if(earliestTime<0){
+        	earliestTime = start;
+        }
+        else if(earliestTime>start){
+        	earliestTime=start;
+        }
       }
-      return totalTime;
+      rti.earliestTime = earliestTime;
+      rti.totalTime = totalTime;
+      return rti;
     }
     public void updateAllWfProcessRate(){
     	for(WorkflowApp app : workflowApps.values()){
@@ -255,6 +277,13 @@ public class WorkflowManager {
 			int numRunningMaps = 0;
 			long runningTime = 0;
 			long timeUsed = 0;
+			long startTime = -1;
+			boolean needCountStart = true;
+			PathProgressInfo appPpi = appProc.pathProgressInfo.get(index+1);
+			if(appPpi!=null && appPpi.startTime!=0){
+				startTime = appPpi.startTime;
+				needCountStart = false;
+			}
 			for(String jobName : jobNames){
 				JobID id = app.getNode(jobName).getJobId();
 				JobInProgress job = waitingJobs.get(id);
@@ -265,9 +294,15 @@ public class WorkflowManager {
 					// get the exactly working progress of one path.
 					//compute finished ones..
 					Vector<TaskInProgress> vct = job.reportTasksInProgress(true, true);
-					long totaltime = getTotalTaskTime(vct);
-					LOG.info("WFProgressRate of job:"+jobName+".jobName:"+job.getProfile().getJobName()+".f:"+job.finishedMaps()+".r:"+job.runningMaps()+".totaltime: "+totaltime);
-					timeUsed+=totaltime;
+					RunningTaskInfo rti = getTotalTaskTime(vct);
+					LOG.info("WFProgressRate of job:"+jobName+".jobName:"+job.getProfile().getJobName()+".f:"+job.finishedMaps()+".r:"+job.runningMaps()+".totaltime: "+rti.totalTime);
+					timeUsed+=rti.totalTime;
+					if(needCountStart && startTime<=0){
+						startTime = rti.earliestTime;
+					}
+					else if(needCountStart && startTime>rti.earliestTime){
+						startTime = rti.earliestTime;
+					}
 					numTotalTasks += job.desiredMaps();
 					numCompleteTasks += job.finishedMaps();
 					//compute running ones..
@@ -289,6 +324,12 @@ public class WorkflowManager {
 						numTotalTasks +=jc.numMapTasks;
 						timeUsed += jc.avgMapTaskTime * jc.numMapTasks;
 						LOG.info("WFProgressRate of job:"+jobName+" found in completeList. MapTasks:"+jc.numMapTasks+".avg:"+jc.avgMapTaskTime);
+						if(needCountStart && startTime<0){
+							startTime = jc.startTime;
+						}
+						else if(needCountStart && startTime>jc.startTime){
+							startTime = jc.startTime;
+						}
 					}
 					else{// this job havn't been submit yet , get task num from configuration file
 						NodeConfig jobConf = app.getJobConfig(jobName);
@@ -313,19 +354,20 @@ public class WorkflowManager {
 			// collect information of every path on the workflow application
 			long avg = timeUsed/numCompleteTasks;
 			// deadline  = totaltasks * (current - start) / completetasks + start
-			long dueTime = numTotalTasks*(currentTime-app.getAppProcess().startTime)/(runningTime/avg+numCompleteTasks);
+			long dueTime = numTotalTasks*(currentTime-startTime)/(runningTime/avg+numCompleteTasks);
 			float progressRate = (runningTime/avg + numCompleteTasks)/numTotalTasks;
 			PathProgressInfo ppi = new PathProgressInfo();
 			ppi.dueTime = dueTime;
 			ppi.progressRate = progressRate;
 			ppi.avgMapTime = avg;
+			ppi.startTime = startTime;
 			ppi.numTaskRemain = numTotalTasks - numCompleteTasks - (int)(runningTime/avg);
 			ppi.numTotalTasks = numTotalTasks;
 			appProc.pathProgressInfo.put(index,ppi);
 			if(maxDueTime < dueTime){
 				maxDueTime = dueTime;
 			}
-			LOG.info("WorkflowProcessRate Info: maxDueTime: "+ maxDueTime+". Path info: timeUsed:"+ timeUsed+",numComplete:"+numCompleteTasks+",numTotalTasks:"+numTotalTasks+",dueTime:"+dueTime+",processRate:"+progressRate);
+			LOG.info("WorkflowProcessRate Info:startTime:"+startTime+" maxDueTime: "+ maxDueTime+". Path info: timeUsed:"+ timeUsed+",numComplete:"+numCompleteTasks+",numTotalTasks:"+numTotalTasks+",dueTime:"+dueTime+",processRate:"+progressRate);
 			
 		}
 		
@@ -600,11 +642,12 @@ public class WorkflowManager {
 		return jobtoInit;
 	}
 	private void addtoCompletedJobs(JobInProgress job){
+		RunningTaskInfo rti = getTotalTaskTime(job.reportTasksInProgress(true, true));
 		JobCompleteInfo jc = new JobCompleteInfo();
 		jc.numMapTasks = job.desiredMaps();
 		jc.numRedTasks = job.desiredReduces();
 		jc.avgMapTaskTime = getAverageMapTime(job.reportTasksInProgress(true, true));
-		jc.startTime = job.launchTime;
+		jc.startTime = rti.earliestTime;
 		jc.finishTime = job.finishTime;
 		completedJobs.put(job.getJobID(), jc);
 		
