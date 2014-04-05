@@ -324,6 +324,8 @@ class WorkflowTaskScheduler extends TaskScheduler {
     			
     			for(TaskAttemptID taid : tip.getActiveTasks().keySet()){
     				String tt = tip.machineWhereTaskRan(taid);
+    				if(taid==null || tt==null)
+    					break;
     				LOG.info("task "+taid.toString()+" runs on "+tt);
     				
     				if(taskOnTT.containsKey(tt)){
@@ -339,7 +341,8 @@ class WorkflowTaskScheduler extends TaskScheduler {
     				}
     			}
     		}
-    		Names.add(tmpName);
+
+   			Names.add(tmpName);
     	}
     	return Names;
     }
