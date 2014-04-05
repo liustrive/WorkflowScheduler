@@ -77,7 +77,7 @@ public class WorkflowManager {
 		String wfName = jobInWorkflow.get(jobid);
 		if(wfName==null)
 			return false;
-		if(!runningApps.containsKey(jobid)){
+		if(!runningApps.containsKey(wfName)){
 			LOG.info("Why "+jobid.toString() +" wasn't in runningApps?");
 			return false;
 		}
@@ -305,7 +305,7 @@ public class WorkflowManager {
 					}
 				}
 			}
-		
+			index++;
 			if(numCompleteTasks==0 || timeUsed==0){
 				// havn't start yet, will be scheduled due to node rank
 				continue;
@@ -326,7 +326,7 @@ public class WorkflowManager {
 				maxDueTime = dueTime;
 			}
 			LOG.info("WorkflowProcessRate Info: maxDueTime: "+ maxDueTime+". Path info: timeUsed:"+ timeUsed+",numComplete:"+numCompleteTasks+",numTotalTasks:"+numTotalTasks+",dueTime:"+dueTime+",processRate:"+progressRate);
-			index++;
+			
 		}
 		
 		// if no maxDueTime set, it means the workflow app is just started.
