@@ -401,7 +401,7 @@ class WorkflowTaskScheduler extends TaskScheduler {
         	PathProgressInfo pathInfo = wfManager.getJobInPathRate(id);
         	if(j.runningMaps() <= pathInfo.numSlotNeeded){
         		jobOnTTName.remove(id);
-        		
+        		wfManager.minusLimitedJobs(id);
         		LOG.info("Remove job "+j.getJobID().toString()+ " from tracker-limited list.");
         	}
         	else if(!taskTracker.getStatus().getTrackerName().equals(jobOnTTName.get(id).get(0))){
