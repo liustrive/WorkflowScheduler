@@ -323,21 +323,23 @@ class WorkflowTaskScheduler extends TaskScheduler {
     		for(TaskInProgress tip : st){
     			
     			for(TaskAttemptID taid : tip.getActiveTasks().keySet()){
-    				String tt = tip.machineWhereTaskRan(taid);
-    				if(taid==null || tt==null)
-    					break;
-    				LOG.info("task "+taid.toString()+" runs on "+tt);
-    				
-    				if(taskOnTT.containsKey(tt)){
-    					int num = taskOnTT.get(tt)+1;
-    					taskOnTT.put(tt, num);
-    					if(num> maxTT){
-    						maxTT=num;
-    						tmpName = tt;
-    					}
-    				}
-    				else{
-    					taskOnTT.put(tt, 1);
+    				if(tip.getTaskStatus(taid)!=null){
+	    				String tt = tip.machineWhereTaskRan(taid);
+	    				if(taid==null || tt==null)
+	    					break;
+	    				LOG.info("task "+taid.toString()+" runs on "+tt);
+	    				
+	    				if(taskOnTT.containsKey(tt)){
+	    					int num = taskOnTT.get(tt)+1;
+	    					taskOnTT.put(tt, num);
+	    					if(num> maxTT){
+	    						maxTT=num;
+	    						tmpName = tt;
+	    					}
+	    				}
+	    				else{
+	    					taskOnTT.put(tt, 1);
+	    				}
     				}
     			}
     		}

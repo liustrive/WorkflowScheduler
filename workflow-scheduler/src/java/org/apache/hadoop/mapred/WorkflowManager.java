@@ -283,6 +283,7 @@ public class WorkflowManager {
 			if(appPpi!=null && appPpi.startTime!=0){
 				startTime = appPpi.startTime;
 				needCountStart = false;
+				LOG.info("startTime already set to "+ startTime);
 			}
 			for(String jobName : jobNames){
 				JobID id = app.getNode(jobName).getJobId();
@@ -355,7 +356,7 @@ public class WorkflowManager {
 			long avg = timeUsed/numCompleteTasks;
 			// deadline  = totaltasks * (current - start) / completetasks + start
 			long dueTime = numTotalTasks*(currentTime-startTime)/(runningTime/avg+numCompleteTasks);
-			float progressRate = (runningTime/avg + numCompleteTasks)/numTotalTasks;
+			float progressRate = (runningTime/avg + numCompleteTasks)/(float)numTotalTasks;
 			PathProgressInfo ppi = new PathProgressInfo();
 			ppi.dueTime = dueTime;
 			ppi.progressRate = progressRate;
@@ -367,7 +368,7 @@ public class WorkflowManager {
 			if(maxDueTime < dueTime){
 				maxDueTime = dueTime;
 			}
-			LOG.info("WorkflowProcessRate Info:startTime:"+startTime+" maxDueTime: "+ maxDueTime+". Path info: timeUsed:"+ timeUsed+",numComplete:"+numCompleteTasks+",numTotalTasks:"+numTotalTasks+",dueTime:"+dueTime+",processRate:"+progressRate);
+			LOG.info("WorkflowProcessRate Info:avg:"+avg+",startTime:"+startTime+",Current:"+currentTime+"runningTime:"+runningTime+" maxDueTime: "+ maxDueTime+". Path info: timeUsed:"+ timeUsed+",numComplete:"+numCompleteTasks+",numTotalTasks:"+numTotalTasks+",dueTime:"+dueTime+",processRate:"+progressRate);
 			
 		}
 		
