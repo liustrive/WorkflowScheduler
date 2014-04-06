@@ -327,7 +327,7 @@ class WorkflowTaskScheduler extends TaskScheduler {
 	    				String tt = tip.machineWhereTaskRan(taid);
 	    				if(taid==null || tt==null)
 	    					break;
-	    				LOG.info("task "+taid.toString()+" runs on "+tt);
+	    				
 	    				
 	    				if(taskOnTT.containsKey(tt)){
 	    					int num = taskOnTT.get(tt)+1;
@@ -343,8 +343,10 @@ class WorkflowTaskScheduler extends TaskScheduler {
     				}
     			}
     		}
-    		if(tmpName!=null)
+    		if(tmpName!=null){
+    			LOG.info("Job "+job.getJobID().toString()+" runs mostly on "+ tmpName);
     			Names.add(tmpName);
+    		}
     	}
     	return Names;
     }
@@ -376,9 +378,15 @@ class WorkflowTaskScheduler extends TaskScheduler {
           continue;
         }
         JobID id = j.getJobID();
+        WorkflowManager wfManager = WorkflowJobQueuesManager.workflowManager;
         // make sure job only run on some fixed node
         if(jobOnTTName.containsKey(id)){
-        	if(!taskTracker.getStatus().getTrackerName().equals(jobOnTTName.get(id).get(0))){
+        	PathProgressInfo pathInfo = wfManager.getJobInPathRate(id);
+        	if(j.runningMaps() <= pathInfo.numSlotNeeded){
+        		jobOnTTName.remove(id);
+        		LOG.info("Remove job "+j.getJobID().toString()+ " from slot-limited list.");
+        	}
+        	else if(!taskTracker.getStatus().getTrackerName().equals(jobOnTTName.get(id).get(0))){
         		LOG.info("job "+j.getJobID().toString()+" will not run on "+ taskTracker.getStatus().getTrackerName()+". Should be "+ jobOnTTName.get(id).get(0));
         		continue;
         	}
@@ -386,11 +394,8 @@ class WorkflowTaskScheduler extends TaskScheduler {
        // Liu: Check to ensure if the job belongs to a Workflow App, it will not get more slots than needed
         // if it reach the limits save the slot for other job in the workflow.
         if(type==TaskType.MAP){
+	          
 	        
-	        
-
-	        
-	        WorkflowManager wfManager = WorkflowJobQueuesManager.workflowManager;
 	        // saving the slot for another job in the same workflow app
 	        
 	        PathProgressInfo pathInfo = wfManager.getJobInPathRate(id);
