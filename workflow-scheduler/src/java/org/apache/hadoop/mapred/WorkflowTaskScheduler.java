@@ -304,44 +304,61 @@ class WorkflowTaskScheduler extends TaskScheduler {
     private Vector<String> getLocalPlaceTT(JobInProgress job){
     	Vector<String> Names= new Vector<String>();
     	String tmpName=null;
-    	Map<Node, Set<TaskInProgress>> tasksMap = job.getRunningMapCache(); // The node won't work, because rack level node always have the most task
-
-    	
-    	Node maxNode= null;//(Node)tasksMap.keySet().toArray()[0];
-    	int minLevel = 1024;
-    	for(Node n : tasksMap.keySet()){
-    		int lv = n.getLevel();
-    		if(lv<minLevel){
-    			minLevel = lv;
-    			maxNode = n;
-    		}
-    	}
-    	if(maxNode!=null){
-    		Set<TaskInProgress> st = tasksMap.get(maxNode);
-    		int maxTT = 0;
-    		Map<String,Integer> taskOnTT = new HashMap<String,Integer>();
-    		for(TaskInProgress tip : st){
-    			
+    	Set<TaskInProgress> redSet = job.getRunningReduces();
+    	// if there is reduce task running, put reduce tasktracker as running machine; Otherwise pick mostly running machine of maps
+    	if(redSet!=null && redSet.size()>0){
+    		for(TaskInProgress tip : redSet){
     			for(TaskAttemptID taid : tip.getActiveTasks().keySet()){
     				if(tip.getTaskStatus(taid)!=null){
-	    				String tt = tip.machineWhereTaskRan(taid);
+    					String tt = tip.machineWhereTaskRan(taid);
 	    				if(taid==null || tt==null)
 	    					break;
-	    				
-	    				
-	    				if(taskOnTT.containsKey(tt)){
-	    					int num = taskOnTT.get(tt)+1;
-	    					taskOnTT.put(tt, num);
-	    					if(num> maxTT){
-	    						maxTT=num;
-	    						tmpName = tt;
-	    					}
-	    				}
-	    				else{
-	    					taskOnTT.put(tt, 1);
-	    				}
+	    				tmpName = tt;
+	    				break;
     				}
     			}
+    		}
+    	}
+    	else{
+	    	Map<Node, Set<TaskInProgress>> tasksMap = job.getRunningMapCache(); // The node won't work, because rack level node always have the most task
+	
+	    	
+	    	Node maxNode= null;//(Node)tasksMap.keySet().toArray()[0];
+	    	int minLevel = 1024;
+	    	for(Node n : tasksMap.keySet()){
+	    		int lv = n.getLevel();
+	    		if(lv<minLevel){
+	    			minLevel = lv;
+	    			maxNode = n;
+	    		}
+	    	}
+	    	if(maxNode!=null){
+	    		Set<TaskInProgress> st = tasksMap.get(maxNode);
+	    		int maxTT = 0;
+	    		Map<String,Integer> taskOnTT = new HashMap<String,Integer>();
+	    		for(TaskInProgress tip : st){
+	    			
+	    			for(TaskAttemptID taid : tip.getActiveTasks().keySet()){
+	    				if(tip.getTaskStatus(taid)!=null){
+		    				String tt = tip.machineWhereTaskRan(taid);
+		    				if(taid==null || tt==null)
+		    					break;
+		    				
+		    				
+		    				if(taskOnTT.containsKey(tt)){
+		    					int num = taskOnTT.get(tt)+1;
+		    					taskOnTT.put(tt, num);
+		    					if(num> maxTT){
+		    						maxTT=num;
+		    						tmpName = tt;
+		    					}
+		    				}
+		    				else{
+		    					taskOnTT.put(tt, 1);
+		    				}
+	    				}
+	    			}
+	    		}
     		}
     		if(tmpName!=null){
     			LOG.info("Job "+job.getJobID().toString()+" runs mostly on "+ tmpName);
@@ -384,10 +401,11 @@ class WorkflowTaskScheduler extends TaskScheduler {
         	PathProgressInfo pathInfo = wfManager.getJobInPathRate(id);
         	if(j.runningMaps() <= pathInfo.numSlotNeeded){
         		jobOnTTName.remove(id);
-        		LOG.info("Remove job "+j.getJobID().toString()+ " from slot-limited list.");
+        		
+        		LOG.info("Remove job "+j.getJobID().toString()+ " from tracker-limited list.");
         	}
         	else if(!taskTracker.getStatus().getTrackerName().equals(jobOnTTName.get(id).get(0))){
-        		LOG.info("job "+j.getJobID().toString()+" will not run on "+ taskTracker.getStatus().getTrackerName()+". Should be "+ jobOnTTName.get(id).get(0));
+//        		LOG.info("job "+j.getJobID().toString()+" will not run on "+ taskTracker.getStatus().getTrackerName()+". Should be "+ jobOnTTName.get(id).get(0));
         		continue;
         	}
         }
@@ -404,13 +422,16 @@ class WorkflowTaskScheduler extends TaskScheduler {
 	        		String WfAppKey = wfManager.getWfAppNameofJob(id);
 	        		LOG.info("job: "+ j.getProfile().getJobName()+" reach its slot limit "+ j.runningMaps()+". saving slot for others in worklfow: "+ WfAppKey);
 	        		if(!jobOnTTName.containsKey(id)){
-	        			Vector<String> TTName = getLocalPlaceTT(j);
-	        			if(TTName.size()>0 && wfManager.shouldLimitSlot(id)){
-		        			if(jobOnTTName.get(id)==null){
-		        				LOG.info("fixing the job to node:"+ TTName.get(0));
-		        				jobOnTTName.put(id, TTName);
-		        				wfManager.addLimitedJobs(id);
-		        			}
+	        			
+	        			if(wfManager.shouldLimitSlot(id)){
+	        				Vector<String> TTName = getLocalPlaceTT(j);
+	        				if(TTName.size()>0){
+			        			if(jobOnTTName.get(id)==null){
+			        				LOG.info("fixing the job to node:"+ TTName.get(0));
+			        				jobOnTTName.put(id, TTName);
+			        				wfManager.addLimitedJobs(id);
+			        			}
+	        				}
 		        		}
 	        		}
 	        		

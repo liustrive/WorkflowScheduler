@@ -105,12 +105,24 @@ public class WorkflowManager {
 	}
 	public void addLimitedJobs(JobID jobid){
 		String wfName = jobInWorkflow.get(jobid);
-		if(wfName!=null && limitedJobsofApps.containsKey(jobid)){
+		if(wfName!=null && limitedJobsofApps.containsKey(wfName)){
 			int num = limitedJobsofApps.get(wfName);
 			limitedJobsofApps.put(wfName, num+1);
 		}
 		else{
 			limitedJobsofApps.put(wfName, 1);
+		}
+	}
+	public void minusLimitedJobs(JobID jobid){
+		String wfName = jobInWorkflow.get(jobid);
+		if(wfName!=null && limitedJobsofApps.containsKey(wfName)){
+			int num = limitedJobsofApps.get(wfName);
+			if(num > 1){
+				limitedJobsofApps.put(wfName, num-1);
+			}
+			else{
+				limitedJobsofApps.remove(wfName);
+			}
 		}
 	}
 	public boolean isWorkflowJob(JobID jobid){
