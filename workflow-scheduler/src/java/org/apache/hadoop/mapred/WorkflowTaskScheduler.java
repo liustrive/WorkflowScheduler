@@ -361,11 +361,12 @@ class WorkflowTaskScheduler extends TaskScheduler {
 	    			}
 	    		}
     		}
-    		if(tmpName!=null){
-    			LOG.info("Job "+job.getJobID().toString()+" runs mostly on "+ tmpName);
-    			Names.add(tmpName);
-    		}
+
     	}
+		if(tmpName!=null){
+			LOG.info("Job "+job.getJobID().toString()+" runs mostly on "+ tmpName);
+			Names.add(tmpName);
+		}
     	return Names;
     }
     /*
