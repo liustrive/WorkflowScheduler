@@ -307,6 +307,7 @@ class WorkflowTaskScheduler extends TaskScheduler {
     	Set<TaskInProgress> redSet = job.getRunningReduces();
     	// if there is reduce task running, put reduce tasktracker as running machine; Otherwise pick mostly running machine of maps
     	if(redSet!=null && redSet.size()>0){
+    		outerloop:
     		for(TaskInProgress tip : redSet){
     			for(TaskAttemptID taid : tip.getActiveTasks().keySet()){
     				if(tip.getTaskStatus(taid)!=null){
@@ -314,12 +315,12 @@ class WorkflowTaskScheduler extends TaskScheduler {
 	    				if(taid==null || tt==null)
 	    					break;
 	    				tmpName = tt;
-	    				break;
+	    				break outerloop;
     				}
     			}
     		}
     	}
-    	else{
+    	if(tmpName==null){
 	    	Map<Node, Set<TaskInProgress>> tasksMap = job.getRunningMapCache(); // The node won't work, because rack level node always have the most task
 	
 	    	
