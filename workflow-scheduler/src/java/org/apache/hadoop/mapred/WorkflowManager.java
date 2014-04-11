@@ -278,7 +278,8 @@ public class WorkflowManager {
 			criticalPaths.put(app, criticalNames);
 		}
 		// find the slowest critical path, min {sum_completeTasks/sumTotalTasks}
-		
+		long wftotaltime = 0;
+		int wfcompletetask= 0;
 		long maxDueTime = 0;
 		
 		long currentTime = System.currentTimeMillis();
@@ -360,13 +361,22 @@ public class WorkflowManager {
 				}
 			}
 			index++;
+			wftotaltime +=timeUsed;
+			wfcompletetask += numCompleteTasks;
 			if(numCompleteTasks==0 || timeUsed==0){
 				// havn't start yet, will be scheduled due to node rank
+				PathProgressInfo pi = new PathProgressInfo();
+				pi.avgMapTime = 0;
+				pi.dueTime = 0;
+				pi.progressRate = 0;
+				pi.numTaskRemain = numTotalTasks;
+				pi.numTotalTasks = numTotalTasks;
+				appProc.pathProgressInfo.put(index, pi);
 				continue;
 			}
 			// collect information of every path on the workflow application
 			long avg = timeUsed/numCompleteTasks;
-			// deadline  = totaltasks * (current - start) / completetasks + start
+			// deadline  = totaltasks * (current - start) / completetasks
 			long dueTime = numTotalTasks*(currentTime-startTime)/(runningTime/avg+numCompleteTasks);
 			float progressRate = (runningTime/avg + numCompleteTasks)/(float)numTotalTasks;
 			PathProgressInfo ppi = new PathProgressInfo();
@@ -383,7 +393,11 @@ public class WorkflowManager {
 			LOG.info("WorkflowProcessRate Info:avg:"+avg+",startTime:"+startTime+",Current:"+currentTime+"runningTime:"+runningTime+" maxDueTime: "+ maxDueTime+". Path info: timeUsed:"+ timeUsed+",numComplete:"+numCompleteTasks+",numTotalTasks:"+numTotalTasks+",dueTime:"+dueTime+",processRate:"+progressRate);
 			
 		}
-		
+		appProc.numCompletedJobTasks = wfcompletetask;
+		if(wfcompletetask!=0){
+			appProc.avgTime = wftotaltime/wfcompletetask;
+			appProc.dueTime = maxDueTime;
+		}
 		// if no maxDueTime set, it means the workflow app is just started.
 		if(maxDueTime == 0){
 			// do nothing by far.
@@ -392,9 +406,9 @@ public class WorkflowManager {
 			int index_set = 0;
 			for(List<String> jobNames : criticalNames){
 				// reset progressrate of jobs on every path, running jobs only.
-				if(appProc.pathProgressInfo.containsKey(index_set)){
+				if(appProc.pathProgressInfo.containsKey(index_set) && appProc.pathProgressInfo.get(index_set).avgMapTime != 0){
 					PathProgressInfo proInfo = appProc.pathProgressInfo.get(index_set);
-					long timeRemains = maxDueTime - currentTime + app.getAppProcess().startTime;
+					long timeRemains = maxDueTime - currentTime + proInfo.startTime;
 					float turns = (float)timeRemains/proInfo.avgMapTime;
 					if(maxDueTime != proInfo.dueTime){
 						double slotNeed = proInfo.numTaskRemain/turns;
@@ -412,6 +426,29 @@ public class WorkflowManager {
 									+ ". ProgressInfo: (avgMapTime,dueTime,progressRate,numTaskRemain,numSlotNeed)=("+
 									proInfo.avgMapTime+","+proInfo.dueTime+","+proInfo.progressRate+","+proInfo.numTaskRemain+","+ proInfo.numSlotNeeded);
 						}
+					}
+				}
+				else{
+					PathProgressInfo proInfo = appProc.pathProgressInfo.get(index_set);
+					if(appProc.avgTime!=0){
+						long timeRemains = maxDueTime - currentTime + app.getAppProcess().startTime;
+						float turns = (float)timeRemains/appProc.avgTime;
+						double slotNeed = proInfo.numTaskRemain/turns;
+						proInfo.numSlotNeeded = (int)Math.ceil(slotNeed);
+						
+						for(String jobName : jobNames){
+							JobID id = app.getNode(jobName).getJobId();
+							JobInProgress job = waitingJobs.get(id);
+							if(job!=null){
+								jobInWfPath.put(id, proInfo);
+								LOG.info("Path in workflow Info: jobname: "+ job.getProfile().getJobName()
+										+ ". ProgressInfo: (avgMapTime,dueTime,progressRate,numTaskRemain,numSlotNeed)=("+
+										proInfo.avgMapTime+","+proInfo.dueTime+","+proInfo.progressRate+","+proInfo.numTaskRemain+","+ proInfo.numSlotNeeded);
+							}
+						}
+					}
+					else{
+						proInfo.numSlotNeeded = proInfo.numTotalTasks;
 					}
 				}
 				index_set++;
