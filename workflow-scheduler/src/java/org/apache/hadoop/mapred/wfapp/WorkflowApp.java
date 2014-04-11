@@ -66,12 +66,6 @@ public class WorkflowApp{
     public int getCompleteJobTasksNum(){
     	return appProcess.numCompletedJobTasks;
     }
-    public void setCriticalCompletedTaskNum(int num){
-    	appProcess.numCriticalCompletedTotalTask = num;
-    }
-    public void setCriticalTotalTaskNum(int num){
-    	appProcess.numCriticalTotalTasks = num;
-    }
 //    public void setAppTotalTaskNum(int num){
 //    	appProcess.numAppTotalTasks = num;
 //    }
