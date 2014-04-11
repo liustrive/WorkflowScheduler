@@ -401,7 +401,7 @@ class WorkflowTaskScheduler extends TaskScheduler {
         // make sure job only run on some fixed node
         if(jobOnTTName.containsKey(id)){
         	PathProgressInfo pathInfo = wfManager.getJobInPathRate(id);
-        	if(j.runningMaps() <= pathInfo.numSlotNeeded){
+        	if(j.runningMaps() < pathInfo.numSlotNeeded){
         		jobOnTTName.remove(id);
         		wfManager.minusLimitedJobs(id);
         		LOG.info("Remove job "+j.getJobID().toString()+ " from tracker-limited list.");
