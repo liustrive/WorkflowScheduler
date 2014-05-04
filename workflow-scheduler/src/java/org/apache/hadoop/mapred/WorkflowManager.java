@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.FileSystem;
 public class WorkflowManager {
 	private static final Log LOG = LogFactory.getLog(WorkflowManager.class);
 	private static final String SEPERATOR = ".";
+	public static final boolean logButton = false;
 	public static final String WFXMLFILE = "workflow.xml";
 	private Map<String, Long> workflowDeadline = new HashMap<String,Long>();
 	private Map<String, WorkflowApp> workflowApps = new HashMap<String, WorkflowApp>();
@@ -47,7 +48,7 @@ public class WorkflowManager {
 			fs = FileSystem.get(new Configuration());
 		}
 		catch(IOException ioe){
-			LOG.info("error getting filesystem.");
+			LOG.error("error getting filesystem.");
 		}
 	}
 //	private interface WorkflowApp{
@@ -230,7 +231,8 @@ public class WorkflowManager {
    			}
    			 
    		}
-   		LOG.info(dumpStr);
+   		if(logButton)
+   			LOG.info(dumpStr);
    	}
    	class RunningTaskInfo{
    		public long totalTime;
@@ -258,7 +260,8 @@ public class WorkflowManager {
     }
     public void updateAllWfProcessRate(){
     	for(WorkflowApp app : workflowApps.values()){
-    		LOG.info("Updating app: "+ app.getName());
+    		if(logButton)
+    			LOG.info("Updating app: "+ app.getName());
     		getWorkflowProcessRate(app);
     	}
     }
@@ -296,7 +299,8 @@ public class WorkflowManager {
 			if(appPpi!=null && appPpi.startTime!=0){
 				startTime = appPpi.startTime;
 				needCountStart = false;
-				LOG.info("startTime already set to "+ startTime);
+				if(logButton)
+					LOG.info("startTime already set to "+ startTime);
 			}
 			for(String jobName : jobNames){
 				JobID id = app.getNode(jobName).getJobId();
@@ -309,7 +313,8 @@ public class WorkflowManager {
 					//compute finished ones..
 					Vector<TaskInProgress> vct = job.reportTasksInProgress(true, true);
 					RunningTaskInfo rti = getTotalTaskTime(vct);
-					LOG.info("WFProgressRate of job:"+jobName+".jobName:"+job.getProfile().getJobName()+".f:"+job.finishedMaps()+".r:"+job.runningMaps()+".totaltime: "+rti.totalTime);
+					if(logButton)
+						LOG.info("WFProgressRate of job:"+jobName+".jobName:"+job.getProfile().getJobName()+".f:"+job.finishedMaps()+".r:"+job.runningMaps()+".totaltime: "+rti.totalTime);
 					timeUsed+=rti.totalTime;
 					if(needCountStart && startTime<=0){
 						startTime = rti.earliestTime;
@@ -337,7 +342,8 @@ public class WorkflowManager {
 						numCompleteTasks+=jc.numMapTasks;
 						numTotalTasks +=jc.numMapTasks;
 						timeUsed += jc.avgMapTaskTime * jc.numMapTasks;
-						LOG.info("WFProgressRate of job:"+jobName+" found in completeList. MapTasks:"+jc.numMapTasks+".avg:"+jc.avgMapTaskTime);
+						if(logButton)
+							LOG.info("WFProgressRate of job:"+jobName+" found in completeList. MapTasks:"+jc.numMapTasks+".avg:"+jc.avgMapTaskTime);
 						if(needCountStart && startTime<0){
 							startTime = jc.startTime;
 						}
@@ -390,7 +396,8 @@ public class WorkflowManager {
 			if(maxDueTime < dueTime){
 				maxDueTime = dueTime;
 			}
-			LOG.info("WorkflowProcessRate Info:avg:"+avg+",startTime:"+startTime+",Current:"+currentTime+"runningTime:"+runningTime+" maxDueTime: "+ maxDueTime+". Path info: timeUsed:"+ timeUsed+",numComplete:"+numCompleteTasks+",numTotalTasks:"+numTotalTasks+",dueTime:"+dueTime+",processRate:"+progressRate);
+			if(logButton)
+				LOG.info("WorkflowProcessRate Info:avg:"+avg+",startTime:"+startTime+",Current:"+currentTime+"runningTime:"+runningTime+" maxDueTime: "+ maxDueTime+". Path info: timeUsed:"+ timeUsed+",numComplete:"+numCompleteTasks+",numTotalTasks:"+numTotalTasks+",dueTime:"+dueTime+",processRate:"+progressRate);
 			
 		}
 		appProc.numCompletedJobTasks = wfcompletetask;
@@ -422,7 +429,8 @@ public class WorkflowManager {
 						JobInProgress job = waitingJobs.get(id);
 						if(job!=null){
 							jobInWfPath.put(id, proInfo);
-							LOG.info("Path in workflow Info: jobname: "+ job.getProfile().getJobName()
+							if(logButton)
+								LOG.info("Path in workflow Info: jobname: "+ job.getProfile().getJobName()
 									+ ". ProgressInfo: (avgMapTime,dueTime,progressRate,numTaskRemain,numSlotNeed)=("+
 									proInfo.avgMapTime+","+proInfo.dueTime+","+proInfo.progressRate+","+proInfo.numTaskRemain+","+ proInfo.numSlotNeeded);
 						}
@@ -441,7 +449,8 @@ public class WorkflowManager {
 							JobInProgress job = waitingJobs.get(id);
 							if(job!=null){
 								jobInWfPath.put(id, proInfo);
-								LOG.info("Path in workflow Info: jobname: "+ job.getProfile().getJobName()
+								if(logButton)
+									LOG.info("Path in workflow Info: jobname: "+ job.getProfile().getJobName()
 										+ ". ProgressInfo: (avgMapTime,dueTime,progressRate,numTaskRemain,numSlotNeed)=("+
 										proInfo.avgMapTime+","+proInfo.dueTime+","+proInfo.progressRate+","+proInfo.numTaskRemain+","+ proInfo.numSlotNeeded);
 							}
@@ -605,7 +614,8 @@ public class WorkflowManager {
 						}
 						str+="\n";
 					}
-					LOG.info(str);
+					if(logButton)
+						LOG.info(str);
 					//
 					/*
 					avaiableJobs = app.availableJobs();
@@ -649,6 +659,7 @@ public class WorkflowManager {
 		String appName = parseWFName(app);
 		workflowDeadline.remove(appName);
 		waitingQueue.remove(appName);
+		criticalPaths.remove(app);
 	}
 	private int addCompleteTasks(JobInProgress job, WorkflowApp app){
 		int completeTasks = job.desiredTasks();

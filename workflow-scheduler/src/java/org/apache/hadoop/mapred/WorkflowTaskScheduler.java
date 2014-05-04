@@ -563,8 +563,9 @@ class WorkflowTaskScheduler extends TaskScheduler {
         	LOG.info("Task: "+ tlr.task.toString()+" from job: "+ tlr.job.getProfile().getJobName()+ " added to TaskTracker: "+ taskTracker.getTrackerName()+"TT Avaiable slots: "+availableSlots);
         	// dump the workflow jobs info
         	wfManager.getWorkflowProcessRate(tlr.job.getJobID());
-        	wfManager.dumpJobInfo();
-        	//LOG.info("TTandJOB INFO_LOG: TT Avaiable slots: "+availableSlots+". Job info: MAP(finished: "+tlr.job.finishedMapTasks+",total: "+tlr.job.numMapTasks+",running: "+tlr.job.runningMapTasks+"), REDUCE(finished: "+tlr.job.finishedReduceTasks+",total:"+tlr.job.numReduceTasks+",running:"+tlr.job.runningReduceTasks+")");
+        	if(WorkflowManager.logButton)
+        		wfManager.dumpJobInfo();
+        	LOG.info("TTandJOB INFO_LOG: TT Avaiable slots: "+availableSlots+". Job info: MAP(finished: "+tlr.job.finishedMapTasks+",total: "+tlr.job.numMapTasks+",running: "+tlr.job.runningMapTasks+"), REDUCE(finished: "+tlr.job.finishedReduceTasks+",total:"+tlr.job.numReduceTasks+",running:"+tlr.job.runningReduceTasks+")");
         	
         	return tlr;
         }
